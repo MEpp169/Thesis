@@ -4,6 +4,7 @@
 \documentclass{article}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{graphicx}
 
 \begin{document}
 %
@@ -64,7 +65,53 @@ specifies some quantum state. Let $O_{\vec{a},\vec{b}}$ now denote a single-body
 unitary operator acting on POVM distribution vectors. Is it still possible to
 rewrite this operator as an exponential function and describe the effect of the
 unitary operation as the insertion of an additional node into the RBM? \par
-
+Let us first consider the operator. The principal goal is to write it in
+exponential form such that it can be absorbed into the energy functional of a
+slightly modified architecture. There exist several ways of implementing POVMs
+outcoms in an RBM. For reasons which will become apparent later we will choose
+binary encoding. This means each outcome is encoded by pairs of two nodes in the
+network. Binary nodes then lead to the configurations in \ref{tab:node_conf}
+%
+\begin{figure}[h!]
+  \centering
+  \begin{tabular}{c|c}
+      POVM outcome & node configuration \\
+      \hline
+      1 & (0,0) \\
+      2 & (0,1) \\
+      3 & (1,0) \\
+      4 & (1,1)
+  \end{tabular}
+  \caption{4-POVM outcomes implemented by binary nodes.}
+  \label{tab:node_conf}
+\end{figure}
+%
+A single-qubit gate in the POVM formalism corresponds to a complex
+($4\times4$)-matrix. Its 16 entries need to be represented in their entirety in
+the exponential representation of this operator. Rows in this matrix can be
+associated with a fixed ''target outcome'' while entries in the same column
+correspond to the same ''initial outcome''. Let us denote the two nodes encoding
+the target outcome by $(v_1, v_2)$ and the nodes encoding the initial outcome
+by $(h_1, h_2)$. The entry $O_{ij}$ corresponds to the transition element for
+$j\rightarrow i$, where $i,j\in\{1,\hdots,4\}$ represent POVM measurements.
+These states can also be described in terms of the nodes that encode them. Then
+we have transitions $(h^j_1,h^j_2)\rightarrow(v^i_1,v^i_2)$. Each transition
+(to which one specific matrix element is associated) can be represented by a
+unique 4-tuple $(h^j_1,h^j_2, v^i_1,v^i_2)$ where each entry takes binary
+values.  \par
+Consider now products of these nodes. All possible products are given by
+\begin{equation}
+    \{ h_1^i h_2^j v_1^k v_2^l \: : \: (i,j,k,l)\in \{0,1\}^4 \}
+\end{equation}
+I will argue that the value of these variable-products can be used to identify
+specific transitions. It is clear that $h_1h_2v_1v_2$ only evaluates to 1 if all
+variables are equal to one. Hence this outcome can be used to identify the
+($4\rightarrow4$) transition. We hence include this product in the exponent and
+multiply it with a coefficient $\ln{(O_{44})}$ including some correction factors
+which we will discuss later.
+%%%%
+% To Do: COMPLETE %
+%%%%
 
 
 \end{document}
