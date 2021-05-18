@@ -12,8 +12,35 @@
 %
 \begin{document}
 \section{Autoregressive Neural Networks}
-
-
-
-
+Consider, as the simplest non-trivial\footnote{not overparametrized} example
+a three-qubit system acted upon by a single-qubit gate on the third qubit. New
+probabilities are give by
+\begin{align*}
+    P'(a_1,a_2,a_3) &= \mathcal{O}^{a_3a_2a_1}_{b_3b_2b_1} \delta_{(a_2,b_2)}
+                       \delta_{(a_1,b_1)} P(b_1, b_2, b_3) \\
+                    &= \mathcal{O}^{a_3}_{b_3} P (a_1, a_2, b_3)
+\end{align*}
+The autoregressive property ensures that the conditional probabilities, in which
+the joint probability can be decomposed, are implemented by seperate neural
+networks. In probabilities, the following conditions hold
+\begin{align*}
+    P(a_1,a_2,a_3) &= P(a_1) P(a_2|a_1)P(a_3|a_2a_1),\\
+    P'(a_1,a_2,a_3) &= P(a_1) P(a_2|a_1)P'(a_3|a_2a_1).
+\end{align*}
+Hence we can write
+\begin{equation}
+    P'(a_3|a_2a_1) = \mathcal{O}^{a_3}_{b_3} P(b_3|a_2 a_1)
+    \label{eq:cond-probs}
+\end{equation}
+Assuming the conditional probabilites for the measurement outcome on qubit three
+are encooded by 1-layer feed-forward networks with softmax activation function
+allows us to rewrite \ref{eq:cond-probs} as
+\begin{equation*}
+    \frac{\exp(\beta'^3_{a_3} + \gamma'^{(23)}_{a_3a_2} +
+    \gamma'^{(13)}_{a_3a_1})}{\sum_{i,j,k} \exp(\beta'^3_{i}
+    \gamma'^{(23)}_{ij} + \gamma'^{(13)}_{i,})} &= \sum_{b_3} \mathcal{O}^{a_3}_{b_3}
+    \frac{\exp(\beta'^3_{b_3} + \gamma'^{(23)}_{b_3a_2} +
+    \gamma'^{(13)}_{b_3a_1})}{\sum_{i,j,k} \exp(\beta'^3_{i}
+    \gamma'^{(23)}_{ij} + \gamma'^{(13)}_{i,})}
+\end{equation*}
 \end{document}
