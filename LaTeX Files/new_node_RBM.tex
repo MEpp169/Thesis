@@ -1,1 +1,70 @@
-Test
+%%% How The RBM->UBM transition arises naturally when implementing Gates %%%
+
+
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\begin{document}
+%
+%
+\section{Unitary Operations and RBMs}
+%
+The state of an $N$-spin system is described by a wavefunction $\Psi(s)$ with
+$s\in\{0,1\}^N$. $\Psi(s)$ can be encoded in a so-called Boltzmann Machine, a
+simple two-layer ANN. It consists of $N_v$ visible and $N_h$ hidden nodes and
+is specified by parameters $a\in\mathbb{R}^{N_v}, b\in\mathbb{R}^{N_h}$ and
+$w\in\mathbb{R}^{N_h\times N_v}$. The energy function
+\begin{equation}
+    E(v,h) = v^Ta + h^Tb + h^Twv
+\end{equation}
+allows one to express probability distributions defined on $\mathbb{R}^{N_v}$
+according to
+\begin{equation}
+    P(v) = \frac{\sum_{h}e^{-E(v,h)}}{\sum_v \sum_h e^{-E(v,h)}}.
+\end{equation}
+Similarly, if we allow complex $a\in\mathbb{C}^{N_v}, b\in\mathbb{C}^{N_h}$ and
+$w\in\mathbb{C}^{N_h\times N_v}$ we can map each spin configuration
+$s\in\{0,1\}^{N_S}$ of system with $N_S$ spins to a complex amplitude. This is
+then the wavefunction
+\begin{equation}
+    \Psi(s) = \frac{\sum_{h}e^{-E(s,h)}}{\sum_s \sum_h e^{-E(s,h)}}.
+    \label{eq:RBM-psi}
+\end{equation}
+Consider now a 1-body unitary operator $O\in U(2)$. It is completely specified
+by its four matrix elements $O_{ss'}$ where $s,s'\in\{0,1\}$. Equivalently, we
+can express this Operator in terms of an exponential function:
+\begin{equation}
+    O(s, s') = A \exp{(\alpha s + \beta s' +  \omega ss')}.
+\end{equation}
+To do this we simply associate
+\begin{align*}
+    A &= O_{00} \\
+    \alpha &= \ln{\left(\frac{O_{10}}{A}\right)} \\
+    \beta &= \ln{\left(\frac{O_{01}}{A}\right)} \\
+    \omega &= \ln{\left(\frac{O_{11}}{A}\right)} - (\alpha + \beta).
+\end{align*}
+Clearly the function $O(s,s')$ defined this way behaves like the operator. The
+wavefunction $\Psi'(s)$ after $O$ has acted upon the initial state $Psi(s)$ is
+given by
+\begin{align}
+    \Psi'(s) &= \sum_{s'} O_{ss'} \Psi(s_1,\hdots, s', \hdots, s_N) \nonumber \\
+             &= \sum_{s'} \exp{(\alpha s + \beta s' +  \omega ss')} \Psi(s_1,
+                \hdots, s', \hdots, s_N)
+\end{align}
+Expressing the RHS wave-function now in terms of our RBM (cf. \ref{eq:RBM-psi}),
+the sum over spin $s'$ can be associated with another hidden node.
+%
+%
+%
+\section{Unitary Operations and POVM Distributions}
+Suppose now the RBM encodes some probability distribution $P(\vec{a})$ of an
+informationally complete POVM measurement. This distribution then uniquely
+specifies some quantum state. Let $O_{\vec{a},\vec{b}}$ now denote a single-body
+unitary operator acting on POVM distribution vectors. Is it still possible to
+rewrite this operator as an exponential function and describe the effect of the
+unitary operation as the insertion of an additional node into the RBM? \par
+
+
+
+\end{document}
