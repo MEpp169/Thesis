@@ -1,0 +1,79 @@
+%%% Why autoregressive NNs don't work%%%
+%
+%
+\documentclass[a4]{article}
+%
+%
+% Packages
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{physics}
+%
+%
+\begin{document}
+\section{Autoregressive Neural Networks}
+Consider, as the simplest non-trivial\footnote{not overparametrized} example
+a three-qubit system acted upon by a single-qubit gate on the third qubit. New
+probabilities are give by
+\begin{align*}
+    P'(a_1,a_2,a_3) &= \mathcal{O}^{a_3a_2a_1}_{b_3b_2b_1} \delta_{(a_2,b_2)}
+                       \delta_{(a_1,b_1)} P(b_1, b_2, b_3) \\
+                    &= \mathcal{O}^{a_3}_{b_3} P (a_1, a_2, b_3)
+\end{align*}
+The autoregressive property ensures that the conditional probabilities, in which
+the joint probability can be decomposed, are implemented by seperate neural
+networks. In probabilities, the following conditions hold
+\begin{align*}
+    P(a_1,a_2,a_3) &= P(a_1) P(a_2|a_1)P(a_3|a_2a_1),\\
+    P'(a_1,a_2,a_3) &= P(a_1) P(a_2|a_1)P'(a_3|a_2a_1).
+\end{align*}
+Hence we can write
+\begin{equation}
+    P'(a_3|a_2a_1) = \mathcal{O}^{a_3}_{b_3} P(b_3|a_2 a_1)
+    \label{eq:cond-probs}
+\end{equation}
+Assuming the conditional probabilites for the measurement outcome on qubit three
+are encooded by 1-layer feed-forward networks with softmax activation function
+allows us to rewrite \ref{eq:cond-probs} as
+\begin{equation*}
+    \frac{\exp(\beta'^3_{a_3} + \gamma'^{(23)}_{a_3a_2} +
+    \gamma'^{(13)}_{a_3a_1})}{\sum_{i,j,k} \exp(\beta'^3_{i}
+    \gamma'^{(23)}_{ij} + \gamma'^{(13)}_{i,})} = \sum_{b_3} \mathcal{O}^{a_3}_{b_3}
+    \frac{\exp(\beta'^3_{b_3} + \gamma'^{(23)}_{b_3a_2} +
+    \gamma'^{(13)}_{b_3a_1})}{\sum_{i,j,k} \exp(\beta'^3_{i}
+    \gamma'^{(23)}_{ij} + \gamma'^{(13)}_{i,})}
+\end{equation*}
+Ignoring the LHS normlization, we can solve for $\{\beta'^3,\gamma'^{(23)},
+\gamma'^{(13)}\}$. This gives
+\begin{equation}
+  \beta'^3 + \gamma'^{(23)} + \gamma'^{(13)} = \ln( \sum_{b_3}
+  \mathcal{O}^{a_3}_{b_3} \frac{\exp(\beta'^3_{b_3} + \gamma'^{(23)}_{b_3a_2} +
+  \gamma'^{(13)}_{b_3a_1})}{\sum_{i,j,k} \exp(\beta'^3_{i}
+  \gamma'^{(23)}_{ij} + \gamma'^{(13)}_{i,})} )
+\end{equation}
+We now see that a fundamental formal problem arises: The new biases and weight
+matrices $\{\beta'^3,\gamma'^{(23)},\gamma'^{(13)}\}$ all can be though of as
+functions mapping an input $(a_1,a_2,a_3)$ to some number. The fact that the
+parameters are summed however indicates a function of the structure
+\begin{equation}
+    \phi = f(a_3) + g(a_3,a_2) + h(a_3,a_1).
+\end{equation}
+Because of this structure the function can only depend on 32 distinct values
+(no $a_1a_2$-coupling). But the right hand side in general is of the form
+\begin{equation}
+    \phi' = f'(a_1,a_2,a_3)
+\end{equation}
+This discrete function depends on \textit{3-tuples}, whereas $\phi$ only depends
+on pairs of \textit{2-tuples}. In general, $\phi'$ can take more distinct values
+than $\phi$, hence justifying that there cannot exist some $\{\beta'^3,
+\gamma'^{(23)},\gamma'^{(13)}\}$ such that $\phi=\phi'$. \par
+How does this agree with the fact that for 2-qubit systems correct updates
+can be found? This is because for 2-qubit systems we just have 16 different
+($a_1,a_2$)-pairs which can be explicitly considered since they all correspond
+to entries in the weight matrix $\gamma'^{(12)}$. For bigger systems, we can
+use the same approach to encode probabilities if we replace weight matrices by
+\textit{weight tensors}. However, since these scale exponentially with system
+size (all possible outcomes need to be considered), this approach is not useful
+for the efficient simulation of quantum algorithms with neurral networks.
+
+\end{document}

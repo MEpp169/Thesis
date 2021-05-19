@@ -1,0 +1,7 @@
+# LaTeX File Types to ignore #
+##############################
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
