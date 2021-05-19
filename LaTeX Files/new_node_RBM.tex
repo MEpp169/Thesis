@@ -108,10 +108,48 @@ specific transitions. It is clear that $h_1h_2v_1v_2$ only evaluates to 1 if all
 variables are equal to one. Hence this outcome can be used to identify the
 ($4\rightarrow4$) transition. We hence include this product in the exponent and
 multiply it with a coefficient $\ln{(O_{44})}$ including some correction factors
-which we will discuss later.
-%%%%
-% To Do: COMPLETE %
-%%%%
-
+which we will discuss later. The energy functional we choose is
+\begin{equation}
+    E(v_1,v_2,h_1,h_2) = \sum_{i=0,1}\sum_{j=0,1}\sum_{k=0,1}\sum_{l=0,1}
+                         c_{ijkl}h_1^i h_2^j v_1^k v_2^l
+\end{equation}
+We recognize that the transition $1\rightarrow1$ encoded by binary variable
+products in the energy functional is just $c_{0000}$ and always evaluates to 1,
+irrespective of the specific input $(v_1,v_2,h_1,h_2)$. We thus write
+$c_{0000}=\ln(O_{11})$. For input $(0,0,0,0)$ all other terms don't contribute
+since at least one factor is always zero. When looking at configurations that
+involve some nodes not equal to zero, we have to make the following consideration:
+Say we look at the transition $4\rightarrow1$. This corresponds to $v_1=0,v_2=0
+h_1=1,h_2=2$. All products unequal to zero are then $h1, h2, h1h2$. We cannot
+simply identify $c_{0011} = O_{14}$, but instead have to account for the fact
+that we have ''unwanted'' activation products ($h1,h2$ corresponding to the
+transitions $2\rightarrow1, 3\rightarrow1$). Thus we exclude these by an
+appropriate coefficient choice: $c_{0011} = O_{14} - c_{0010} - c_{0001}$. This
+procedure can be applied to every $c_{ijkl}$ and we end up with a unique relation
+$c_{ijkl} = f_{ijkl}(O)$. \par
+Since we showed that the POVM-Operator can be represented as an exponential
+function, the occuring sum over ''prior'' outcomes $b_i$ can be -- together with
+the operator in exponent form -- associated with additional hidden nodes added
+to the network. For our one-body operation, this leads to already two (rather
+than 1 for the case of spin operators) additional hidden nodes. These interact
+with other hidden nodes and hence we have an Unrestricted Boltzmann machine.
+This makes information extraction complicated, since no analytical expression
+for the probability encoded by the UBM can be found anymore due to the
+interaction of the hidden nodes. What can be done however is to transform the
+unrestricted Boltzmann machine into a Deep Boltzmann Machine by the addition of
+a second hidden layer that includes the two nodes added by the one-body
+operation. What were formally interactions within the hidden layer are now
+interaction between the first and second hidden layer. The two additional nodes
+however also interact with the visible units. As we do not allow direct
+interaction between the visible and second hidden layer in the DBM, additional
+nodes can be inserted in the first hidden layer that mediate the interaction
+between the visible and second hidden layer. \par
+Then information from the DBM could be extracted as follows:
+\begin{enumerate}
+  \item Consider hidden layer 1 and hidden layer 2 as a simple RBM. The sum over
+  the units from hidden layer 2 can hence be performed analytically.
+  \item Perform MC-sampling for the hidden nodes from hidden layer 1.
+\end{enumerate}
+This 
 
 \end{document}
