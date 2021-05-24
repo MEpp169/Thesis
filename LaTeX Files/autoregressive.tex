@@ -1,0 +1,359 @@
+%%% Why autoregressive NNs don't work%%%
+%
+%
+\documentclass[a4]{article}
+%
+%
+% Packages
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{physics}
+%
+%
+\begin{document}
+\section{Autoregressive Neural Networks}
+Consider the problem of encoding a probability distribution with an ANN. Are
+there any properties of the distribution at hand that can be exploited when
+trying to construct a suitable network structure? \par
+It is a general result that any probability distribution $P(\vec{x})$ with
+$\vec{x}=(x_1, x_2, \hdots,x_N)^T$ can be rewritten as a product of conditional
+probabilities:
+\begin{equation}
+    P(\vec{x}) = \prod_{i=1}^N p(x_i | x_{<i}),
+\end{equation}
+where $p(x_i | x_{<i})$ is the conditional probability for outcome $x_i$ given
+$x_{<i} = (x_1, \hdots, x_{i-1})$. For $i=1$ we just have $p(x_1)$, independent
+of any other outcomes. It is possible to represent the joint $P(\vec{x})$
+in terms of a collection of several networks that each encode a specific $P(x_i
+| x_{<i})$. If the networks encoding the conditional probabilities are all
+identical in terms of architecture and parameters, we refer to the total NN as a
+\textit{recurrent neural network}. If we do not restrict each sub-network, the
+total NN is called an \textit{autoregressive neural network}. Inputs to the
+network are POVM measurement outcomes $(a_1,a_2)$, represented here by one-hot
+encoded vectors $v=(v_1,v_2,\hdots,v_8)^T$. Each network is a simple 1-layer
+feed-forward network with 4 inputs and softmax activation, which is defined
+according to
+\begin{equation}
+    \text{softmax}(x_i) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
+\end{equation}
+and automatically ensures normalization of the output.
+\section{2-qubit Systems}
+We will now concentrate on a specific architecture and describe how gates can
+-- in princple -- be implemented within that framework. The simplest system to
+describe that sttill allows one to evaluate the action of all fundamental gates
+is a 2-qubit system, described by the POVM distribution $P(\vec{a})=P(a_1,a_2)$.
+This can be decomposed into $P(\vec{a})=P(a_1) P(a_2|a_1)$. Considering that the
+effect of quantum gates in the POVM formalism is just to sum over probabilities
+allows the identification of analytical update rules for arbitrary gates.
+\subsection{1-qubit Gates}
+The effect of gates that only act on single qubits is that the POVM distribution
+after that gate consists of the weighted sum of all old probabilities that
+differ from the post-gate outcome only for the qubit on which the gate has
+acted. Without loss of generality it can be assumed that this is qubit 2. Then
+the gate acts according to
+\begin{equation}
+    P'(a_1,a_2) = O^{a_1a_2}_{b_2} P(a_1, b_2)
+\end{equation}
+Here $O^{a_1a_2}_{b_2}$ denotes the POVM-operator representation of the quantum
+gate. To determine a general update rule, product states and entangled states
+need to be distinguished.
+\subsubsection{Product States}
+For product states $P(a_1,a_2)=P(a_1)P(a_2)$ holds.
+
+
+\section{Not Every single-Qubit Gate can be implemented via Bias Updates alone}
+In this discussion we will consider the entangled GHZ state for two qubits, also
+ known as the Bell state:
+\begin{equation*}
+    \ket{\Psi} = \frac{\ket{00} + \ket{11}}{\sqrt{2}}.
+\end{equation*}
+Suppose we want to describe it in the POVM formalism. Let our IC-POVM be the \textbf{tetrahedral POVM}:
+\begin{equation}
+    \label{tetra-POVM}
+    M_{\text{tetra}} = \left\{ \frac{1}{4}(1 + \vec{s}^{(a)} \cdot
+    \vec{\sigma})_{a \in
+    \{0,1,2,3\} } \right\}
+\end{equation}
+given by the vectors
+\begin{align*}
+    \vec{s}^{(0)} &= \left(0, 0, 1\right)^T \\
+    \vec{s}^{(1)} &= \left(\frac{2 \sqrt{2}}{3}, 0, - \frac{1}{3}\right)^T \\
+    \vec{s}^{(2)} &= \left(-\frac{\sqrt{2}}{3}, \sqrt{\frac{2}{3}}, -
+    \frac{1}{3}\right)^T \\
+    \vec{s}^{(3)} &= \left(-\frac{\sqrt{2}}{3}, -\sqrt{\frac{2}{3}}, -
+    \frac{1}{3} \right)^T.
+\end{align*}
+For practical reasons we will work with a slightly rotated
+($\theta=0.03,\phi=0.02$) POVM basis such that all POVM probabilities are
+non-zero and can hence be implemented by finite biases and weights in our ANN.
+This is necessary because probabilities are encoded according to
+\begin{equation}
+    P(a_1, a_2) = P(a_1) P(a_2|a_1) = \frac{\exp{\beta^1_{a_1}}}{\sum_i
+     \exp{\beta^1_i}}
+    \frac{\exp{\beta^2_{a_2} + \gamma_{a_2a_1}}}{\sum_j \exp{\beta^2_{j} +
+     \gamma_{ja_1}}}
+    \label{eq:ANN-probs}
+\end{equation}
+where we have chosen softmax normalization of the probabilities. Vanishing probabilities would lead to infinite parameters. \par
+Let us consider a standard 1-qubit gate, the hadamard gate $H$, that acts upon
+the second qubit. In the computational basis its action is given by
+\begin{equation}
+    H = \frac{1}{\sqrt{2}}\matqub{1}{1}{1}{-1}.
+\end{equation}
+It is straightforward to formulate this gate in the POVM formalism according to
+the rule
+\begin{equation*}
+    H'^{(\vec{a},\vec{b})} = \Tr{H M^{(\Vec{a})} M ^{(\vec{b'})}
+    (T^{-1})^{(\vec{b'}\vec{b})}}
+\end{equation*}
+where $\vec{a},\vec{b}, \vec{b'}$ are vectors denoting the individual POVM
+outcomes for each qubit for a specific POVM measurement and the summation over
+ $\vec{b'}$ is implicitly assumed. Assume that our Bell state can be described
+ by the POVM distribution $P(\vec{a})$ before the $H$-gate. Immediately after the
+ gate, our 2-qubit state is described by the new distribution $P'(\vec{a})$
+ which is related to the old one according to
+\begin{equation}
+    P'(\vec{a}) =  H'^{(\vec{a},\vec{b})} P(\vec{b}).
+\end{equation}
+These probability distributions are parametrized by our autoregressive neural
+ network in terms of the network parameters $\{ \beta^1, \beta^2, \gamma \}$
+  according to the rule \ref{eq:ANN-probs}. Here $\beta^1, \beta^2$ are 4-entry
+  vectors and $\gamma$ is a 4x4 matrix. Suppose $P'$ can be described with the
+ parameters $\{ \beta^1, \beta^{'2}, \gamma \}$, i.e. only the biases
+corresponding to qubit 2 change. We will show that there does not exist such a $\beta^{'2} = f(\{ \beta^1, \beta^2, \gamma \})$ that is related to the old parameters via some analytical update rule $f$ for the specific case of the
+Hadamard gate acting upon the bell state. \par
+Numerical values for the initial POVM distribution can easily calculated. For
+our Bell state and rotated POVM choice we find
+\begin{equation*}
+    P = \begin{pmatrix}0.12488753 \\ 0.04177482 \\ 0.04472824 \\ 0.03860941 \\
+     0.04177482 \\ 0.124896 \\ 0.03872253 \\ 0.04460665 \\ 0.04472824 \\
+     0.03872253 \\ 0.04165755 \\ 0.12489168 \\ 0.03860941 \\ 0.04460665 \\
+     0.12489168 \\ 0.04189225 \end{pmatrix}
+\end{equation*}
+The network parameters that parametrize this distribution can be found
+analytically. To do so, we first consider the probabilities $P(a_1)$ for the
+POVM outcome measured on the first qubit. This is given by
+\begin{equation*}
+    P(a_1) = \sum_{a_2}P(a_1,a_2)
+\end{equation*}
+which inherits normalization from the POVM distribution so that $\sum_{a_1}
+P(a_1) = 1$ is indeed fulfilled. We can now simply associate
+\begin{equation*}
+    \beta^1_{a_1} = \log{\left(\sum_{a_2}P(a_1,a_2)\right)},
+\end{equation*}
+where the RHS can be obtained by summing over the entries in the probability
+vector for the \textit{combined} outcomes $(a_1,a_2)$ in groups of four probabilities. The normalization constant from \ref{eq:ANN-probs} was excluded
+in this consideration here as it is identical for all biases, and contributes
+only to a constant offset which gets cancelled out by the softmax normalization anyways (can be factored out in denominator). With $\log{0.25} = -1.3863$ we
+obtain biases
+\begin{equation*}
+    \beta^1 = ( -1.3863,\:  -1.3863, \: -1.3863, \:  -1.3863)^T.
+\end{equation*}
+As we have enough free parameters to completely characterise the measurement
+ distribution, we can set the biases $\beta^2 = 0$, but in general allow them
+ to attain a non-zero value after updating them to account for the action of the
+  gate. By recognizing $P(a_1, a_2) = P(a_2|a_1) P(a_1)$ and remembering that
+   conditional probabilities are encoded according to \ref{eq:ANN-probs} we can
+ write
+\begin{equation*}
+     \frac{\exp{\gamma_{a_2a_1}}}{\sum_j \exp{\gamma_{ja_1}}} = P(a_2|a_1) =
+      \frac{P(a_1, a_2)}{P(a_1)}
+\end{equation*}
+we can determine
+\begin{equation*}
+    \gamma_{a_2a_1} = \log{\left(\frac{P(a_1, a_2)}{P(a_1)}\right)}
+\end{equation*}
+This yields
+\begin{equation*}
+    \gamma = \begin{pmatrix}   -0.69404732 & -1.78916718 & -1.72085591 &
+    -1.86796488\\
+   -1.78916718 & -0.69397956 & -1.86503928 & -1.72357789\\
+   -1.72085591& -1.86503928 & -1.79197831 &  -0.6940141 \\
+   -1.86796488& -1.72357789 &   -0.6940141 & -1.78635998\\ \end{pmatrix}
+\end{equation*}
+Now let's assume $P'(a_1,a_2)$ can be represented by $\{ \beta^{(1)},
+\beta^{'(2)}, \gamma \}$. This means
+\begin{align}
+    \frac{\exp{\beta^{(2)'}_{a_2} + \gamma_{a_2a_1}}}{\sum_j
+    \exp{\beta^{'(2)}_{j} + \gamma_{ja_1}}} &=
+    \hat{O}^{a_2 b_2} \frac{\exp{\beta^{(2)}_{b_2} +
+    \gamma_{b_2a_1}}}{\sum_j \exp{\beta^{(2)}_{j} + \gamma_{ja_1}}},
+    \label{eq:pre-result}
+\end{align}
+where we implicitly summed over $b_2$ and excluded $P(a_1)$ because it isn't of
+ interest for our purposes. This can be simplified to
+\begin{align}
+    \beta^{(2)'}_{a_2}  &=  \log{\left( \hat{O}^{a_2 b_2}
+     \frac{\exp{\beta^{(2)}_{b_2} + \gamma_{b_2a_1}}}{\sum_j
+     \exp{\beta^{(2)}_{j} + \gamma_{ja_1}}} \right)} - \gamma_{a_2a_1} \\
+    &= \log{\left( \hat{O}^{a_2 b_2} \frac{\exp{ \gamma_{b_2a_1}}}{\sum_j
+    \exp{ \gamma_{ja_1}}} \right)} - \gamma_{a_2a_1}.
+    \label{eq:final_expr}
+\end{align}
+Here we used that our initial biases for the second qubit were all zero. Going
+from \ref{eq:pre-result} to \ref{eq:final_expr}, we excluded the normalization
+of the new probabilities. This however is not an issue, since the normalization
+just corresponds to an identical offset for all biases  $\beta^{'(2)}$ after applying the $\log$. This offset however cancels out when we later apply the
+softmax operation, as it can be factored out in both numerator and denominator. Since we made the restriction that $\beta^{(1)}$ and $\gamma$ should not be
+affected by the gate, the only unknown in this equation is $\beta^{'(2)}$. For a fixed $a_2\in\{0,1,2,3\}$, the above relation has to hold for all $a_1\in\{0,1,2,3\}$. This means we have 4 equations that each contain only
+contain $\beta^{'(2)}$ as a free parameter and that need to be fulfilled simultaneously. Restricting ourselves to the case $a_2=0$, we have four
+equations that $\beta^{'(2)}_0$ needs to fulfill. For $a_1 = 0$ we obtain:
+\begin{align*}
+    \beta^{(2)'}_0 = -0.69135
+\end{align*}
+For $a_1=1$, however, \ref{eq:final_expr} leads to
+\begin{equation*}
+    \beta^{(2)'}_0 = 1.06625
+\end{equation*}
+which clearly contradicts the result obtained for $a_1=0$. But by assumption
+the bias $\beta^{(2)'}_{a_2}$ should attain a value independent of the outcome $a_1$. This condition however leads to contradicting results. Hence, in general,
+ to encode the action of single-qubit gates on entangled states, it is not
+ possible to encode the resulting probability distribution merely in terms of
+ bias updates for the qubit on which the gate acts.
+Updated weight matrix $\gamma'$ derived to encode probabilities after (general)
+ gate:
+\begin{equation*}
+    \gamma'_{a_2 a_1} = \log{\left( \mathcal{O}_G^{a_2a_1b_2b_1}
+     \frac{\exp{\beta^2_{b_2} + \gamma_{b_2 b_1} + \beta^1_{b_1}}}{
+     \sum_{ij\in\{ 1,2,3,4\}} \exp{\beta^2_j + \gamma_{ji} + \beta^1_i}}
+     \right)} - \beta^2_{a_2} - \beta^1_{a_1}
+\end{equation*}
+this choice guarantees:
+\begin{equation*}
+    \frac{\exp{\beta^2_{a_2} + \gamma'_{a_2a_1} + \beta^1_{a_1}}}{
+    \sum_{ij\in\{ 1,2,3,4\}} \exp{\beta^2_{a_j} + \gamma'_{a_ja_i} +
+    \beta^1_{a_i}}} = \mathcal{O}_G^{a_2a_1b_2b_1} P_{b_2b_1} = P'(a_2,a_1)
+\end{equation*}
+We see that the specific choice for $\beta^1,\beta^2$ do not influence the
+encoded probability distribution, since by construction of $\gamma'_{a_2a_1}$
+they do not appear in the total expression for the probability distribution
+(added and subtracted in the exponent). Hence one could -- for simplicity --
+set $\beta^2,\beta^1=0$. However, this would mean
+\begin{equation*}
+    P(a_1) = \frac{\exp{\beta^1_{a_1}}}{\sum_i \exp{\beta^1_{a_i}}} = 0.25
+    \quad \forall a_1 \in \{1,2,3,4\}
+\end{equation*}
+which clearly is not correct in general. Indeed $P(a_1)$ depends on the specific
+ POVM probability distribution of the state under investigation:
+\begin{equation*}
+    P(a_1) = \sum_{a_2}P(a_1,a_2).
+\end{equation*}
+Suppose we have a two-qubit gate. For the first qubit, we can formulate the
+ following operator:
+\begin{align}
+    \hat{O}^{a_1 b_1} &= \sum_{a_2,b_2} \hat{O}^{a_1a_2b_1b_2}
+\end{align}
+which acts according to
+\begin{align}
+    P'(a_1) &= \hat{O}^{a_1 b_1} P(b_1)
+\end{align}
+where summation over indices appearing twice is implicitly assumed. This allows
+us to simply update the biases $\beta^1$ according to the single-qubit rule:
+\begin{equation*}
+    \beta^{'1}_{a_1} = \log{\left(\hat{O}^{a_1 b_1} P(b_1) \right)} =
+     \log{\left(\hat{O}^{a_1 b_1} \frac{\exp{\beta^1_{b_1}}}{\sum_{i}
+      \exp{\beta^1_i}} \right)}
+\end{equation*}
+While the effect of the update $\beta{'1}$ will be compensated by the weight
+matrix, it is still useful because $P(a_1)$ is now encoded correctly,
+independent from $a_2$ (that is, we do not require $\gamma_{a_2a_1}$ to obtain
+an expression for the $P(a_1)$ encoded by our network.\par
+Hence two qubit gates acting on qubit 2 would lead to
+ $\{\beta^1,\beta^2,\gamma\}\:\Rightarrow\{\beta^{'1},\beta^2,\gamma'\}$.
+ While technically the new distribution could be uniquely specified by the
+ choice of $\gamma'$, an update of $\beta^{1}$ is also included such that
+ $P(a_1)$ is correctly encoded. The biases $\beta^2$ can be absorbed in the
+ weight matrix $\gamma$:
+\begin{equation*}
+    \gamma_{a_2a_1} = \begin{pmatrix} \gamma_{11} + \beta^2_1 & \gamma_{12} +
+     \beta^2_1 & \gamma_{13}+ \beta^2_1 & \gamma_{14}+ \beta^2_1 \\
+    \gamma_{21} + \beta^2_2 &  \gamma_{22} + \beta^2_2 & \hdots & \\
+    \vdots & & \ddots & \vdots\\
+    \gamma_{41} + \beta^2_4& \hdots & & \gamma_{44} + \beta^2_4\end{pmatrix}
+\end{equation*}
+This does not -- unlike for the case of the biases $\beta^1$ -- lead to false
+ probabilities $(\beta^2$ can never appear independently from $\gamma$). For
+ non-entangled qubits, we can simply include the bias in the weight matrix:
+\begin{equation*}
+    \gamma_{a_2a_1} = \begin{pmatrix}  \beta^2_1 &  \beta^2_1 &  \beta^2_1 &
+     \beta^2_1 \\
+    \beta^2_2 &  \beta^2_2 & \hdots & \\
+    \vdots & & \ddots & \vdots\\
+    \beta^2_4& \hdots & & \beta^2_4\end{pmatrix}
+\end{equation*}
+Hence our 2-qubit network can just as well be described in terms of $\{\beta^1,
+ \gamma \}$ and does not require explicit biases for qubit 2, as they can be
+ easily absorbed into the weight matrix.
+
+
+
+
+
+
+
+\section{Larger Systems}
+Consider, as the simplest non-trivial\footnote{not overparametrized} example
+a three-qubit system acted upon by a single-qubit gate on the third qubit. New
+probabilities are give by
+\begin{align*}
+    P'(a_1,a_2,a_3) &= \mathcal{O}^{a_3a_2a_1}_{b_3b_2b_1} \delta_{(a_2,b_2)}
+                       \delta_{(a_1,b_1)} P(b_1, b_2, b_3) \\
+                    &= \mathcal{O}^{a_3}_{b_3} P (a_1, a_2, b_3)
+\end{align*}
+The autoregressive property ensures that the conditional probabilities, in which
+the joint probability can be decomposed, are implemented by seperate neural
+networks. In probabilities, the following conditions hold
+\begin{align*}
+    P(a_1,a_2,a_3) &= P(a_1) P(a_2|a_1)P(a_3|a_2a_1),\\
+    P'(a_1,a_2,a_3) &= P(a_1) P(a_2|a_1)P'(a_3|a_2a_1).
+\end{align*}
+Hence we can write
+\begin{equation}
+    P'(a_3|a_2a_1) = \mathcal{O}^{a_3}_{b_3} P(b_3|a_2 a_1)
+    \label{eq:cond-probs}
+\end{equation}
+Assuming the conditional probabilites for the measurement outcome on qubit three
+are encooded by 1-layer feed-forward networks with softmax activation function
+allows us to rewrite \ref{eq:cond-probs} as
+\begin{equation*}
+    \frac{\exp(\beta'^3_{a_3} + \gamma'^{(23)}_{a_3a_2} +
+    \gamma'^{(13)}_{a_3a_1})}{\sum_{i,j,k} \exp(\beta'^3_{i}
+    \gamma'^{(23)}_{ij} + \gamma'^{(13)}_{i,})} = \sum_{b_3} \mathcal{O}^{a_3}_{b_3}
+    \frac{\exp(\beta'^3_{b_3} + \gamma'^{(23)}_{b_3a_2} +
+    \gamma'^{(13)}_{b_3a_1})}{\sum_{i,j,k} \exp(\beta'^3_{i}
+    \gamma'^{(23)}_{ij} + \gamma'^{(13)}_{i,})}
+\end{equation*}
+Ignoring the LHS normlization, we can solve for $\{\beta'^3,\gamma'^{(23)},
+\gamma'^{(13)}\}$. This gives
+\begin{equation}
+  \beta'^3 + \gamma'^{(23)} + \gamma'^{(13)} = \ln( \sum_{b_3}
+  \mathcal{O}^{a_3}_{b_3} \frac{\exp(\beta'^3_{b_3} + \gamma'^{(23)}_{b_3a_2} +
+  \gamma'^{(13)}_{b_3a_1})}{\sum_{i,j,k} \exp(\beta'^3_{i}
+  \gamma'^{(23)}_{ij} + \gamma'^{(13)}_{i,})} )
+\end{equation}
+We now see that a fundamental formal problem arises: The new biases and weight
+matrices $\{\beta'^3,\gamma'^{(23)},\gamma'^{(13)}\}$ all can be though of as
+functions mapping an input $(a_1,a_2,a_3)$ to some number. The fact that the
+parameters are summed however indicates a function of the structure
+\begin{equation}
+    \phi = f(a_3) + g(a_3,a_2) + h(a_3,a_1).
+\end{equation}
+Because of this structure the function can only depend on 32 distinct values
+(no $a_1a_2$-coupling). But the right hand side in general is of the form
+\begin{equation}
+    \phi' = f'(a_1,a_2,a_3)
+\end{equation}
+This discrete function depends on \textit{3-tuples}, whereas $\phi$ only depends
+on pairs of \textit{2-tuples}. In general, $\phi'$ can take more distinct values
+than $\phi$, hence justifying that there cannot exist some $\{\beta'^3,
+\gamma'^{(23)},\gamma'^{(13)}\}$ such that $\phi=\phi'$. \par
+How does this agree with the fact that for 2-qubit systems correct updates
+can be found? This is because for 2-qubit systems we just have 16 different
+($a_1,a_2$)-pairs which can be explicitly considered since they all correspond
+to entries in the weight matrix $\gamma'^{(12)}$. For bigger systems, we can
+use the same approach to encode probabilities if we replace weight matrices by
+\textit{weight tensors}. However, since these scale exponentially with system
+size (all possible outcomes need to be considered), this approach is not useful
+for the efficient simulation of quantum algorithms with neural networks.
+
+\end{document}
