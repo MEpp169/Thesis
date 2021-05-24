@@ -135,7 +135,7 @@ than 1 for the case of spin operators) additional hidden nodes. These interact
 with other hidden nodes and hence we have an Unrestricted Boltzmann machine.
 This makes information extraction complicated, since no analytical expression
 for the probability encoded by the UBM can be found anymore due to the
-interaction of the hidden nodes. What can be done however is to transform the
+interactions of the hidden nodes. What can be done however is to transform the
 unrestricted Boltzmann machine into a Deep Boltzmann Machine by the addition of
 a second hidden layer that includes the two nodes added by the one-body
 operation. What were formally interactions within the hidden layer are now
@@ -150,6 +150,33 @@ Then information from the DBM could be extracted as follows:
   the units from hidden layer 2 can hence be performed analytically.
   \item Perform MC-sampling for the hidden nodes from hidden layer 1.
 \end{enumerate}
-This  
-
+The question that arises now is whether the new operator expression still allows
+such a procedure. The links in the graph structure that is the Boltzmann machine
+are determined by the form of the energy functional. Interactions can be
+classified as follows:
+\begin{itemize}
+  \item One-point functions: For instance $h_1, v_2, \hdots$. Their coefficients
+  correspond to biases associated with the corresponding nodes.
+  \item Two-point functions: Here three cases need to be distringuished
+  \begin{itemize}
+    \item Visible-hidden: Such as $v_1h_2$. These are allowed and can be realized
+    by weights alone while still agreeing with the RBM structure.
+    \item Visible-Visible: Such as $v_1v_2$. These interactions appear
+    irreconcilable with the RBM structure at first but actually can be realized
+    if we simply introduce another hidden node that mediates their interaction.
+    \item Hidden-Hidden: Such as $h_1h_2$. These interactions are problematic
+    since they forbid efficient sampling from the NN. Just as the interactions
+    in the visible layer, these can be impemented by a new node in another,
+    third layer. This circumvents intralayer connections but does not make
+    sampling any easier.
+  \end{itemize}
+  \item Three point functions: Such as $v_1v_2h_1$. Not sure yet if they can be
+  rewritten in terms of simpler functions.
+  \item Four-point function: This is just $v_1v_2h_1h_2$ and is very complicated
+  to implement.
+\end{itemize}
+While we have shown that it is generally possibe to rewrite single-qubit gates
+in terms of POVM distributions, they lead to energy functionals that are too
+complicated to be implemented efficiently. Hence we conclude that it is not
+worth pursuing this approach.
 \end{document}
