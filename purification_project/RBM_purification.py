@@ -38,10 +38,21 @@ class RBM():
         n_a: nr of auxiliary (hidden) nodes
         """
 
-        'Initialize parameters for RBM'
+        'Initialize size of RBM'
         self.n_v = n_v
         self.n_h = n_h
         self.n_a = n_a
+
+        'Initialize parameters of RBM'
+        self.biases_v = np.random.rand(self.n_v) + 1j * np.random.rand(self.n_v)
+        self.biases_h = np.random.rand(self.n_h) + 1j * np.random.rand(self.n_h)
+        self.biases_a = np.random.rand(self.n_a) + 1j * np.random.rand(self.n_a)
+
+        self.weights_h = (np.random.rand(self.n_h, self.n_v) +
+                            1j * np.random.rand(self.n_h, self.n_v))
+        self.weights_a = (np.random.rand(self.n_a, self.n_v) +
+                            1j * np.random.rand(self.n_a, self.n_v))
+
 
     def derivative_bias_v(self, v1, v2, part):
         """returns the derivative of log(rho_unnormalized) w.r.t. the visible
@@ -245,61 +256,113 @@ class RBM():
 
         return(total_grad_r, total_grad_i)
 
+    def fidelity(self, learning_step, rho_true):
+        """Calculates the fidelity of the NN-density matrix and the true density
+        matrix"""
+
+        bias_v = self.biases_v_training[learning_step, :]
+        bias_h = self.biases_h_training[learning_step, :]
+        bias_a = self.biases_a_training[learning_step, :]
+
+        weight_h = self.weights_h_training[learning_step, :, :]
+        weight_a = self.weights_a_training[learning_step, :, :]
+
+        rho_NN = np.zeros((2**self.n_v, 2**self.n_v), dtype=complex)
+        for i in range(2**self.n_v):
+            for j in range(2**self.n_v):
+                rho_NN[i, j] = (self.calc_rho_ij(bias_v, bias_h, bias_a,
+                                weight_h, weight_a, i, j))
+
+        print(rho_NN)
+        #print(rho_true)
+        fidelity = np.trace( sqrtm( sqrtm(rho_NN) @ rho_true @ sqrtm(rho_NN)))
+
+    def calc_rho_ij(self, bias_v, bias_h, bias_a, weight_h, weight_a, i, j):
+        'calculates one density matrix element specified by (v1, v2)'
+
+        rho_ij = 0
+        for a in range(2**self.n_a):
+            rho_ij += (calc_psi(bias_v, bias_h, bias_a, weight_h, weight_a, i, a)
+                        * np.conj(calc_psi(bias_v, bias_h, bias_a, weight_h,
+                                  weight_a, j, a)))
+        return(rho_ij)
+
+
     def stochastic_gradient_descent(self, n_iterations, learning_rate, n_bases,
-                                    samples):
+                                    samples, subset_size, rho_true):
 
-        # initialize parameter arrays for all iteration steps
-        biases_v = np.zeros((n_iterations, self.n_v))
-        biases_h = np.zeros((n_iterations, self.n_h))
-        biases_a = np.zeros((n_iterations, self.n_a))
+        # add attributes to RBM:
+        self.biases_v_training = np.zeros((n_iterations, self.n_v),
+                                            dtype=complex)
+        self.biases_h_training = np.zeros((n_iterations, self.n_h),
+                                            dtype=complex)
+        self.biases_a_training = np.zeros((n_iterations, self.n_a),
+                                            dtype=complex)
 
-        weights_h = np.zeros((n_iterations, self.n_h, self.n_v))
-        weights_a = np.zeros((n_iterations, self.n_a, self.n_v))
-
-        # choose random complex parameters for initial step
-        biases_v[0, :] = (np.random.rand(self.n_v) +
-                             1j * np.random.rand(self.n_v))
-        biases_h[0, :] = (np.random.rand(self.n_h) +
-                             1j * np.random.rand(self.n_h))
-        biases_a[0, :] = (np.random.rand(self.n_a) +
-                             1j * np.random.rand(self.n_a))
-
-        weights_h[0, :] = (np.random.rand((self.n_h, self.n_v)) +
-                             1j * np.random.rand((self.n_h, self.n_v)))
-        weights_a[0, :] = (np.random.rand((self.n_a, self.n_v)) +
-                             1j * np.random.rand((self.n_a, self.n_v)))
-
-        fidelities = np.zeros(n_iterations)
-
-        for i in range(1, n_interactions):
+        self.weights_h_training = np.zeros((n_iterations, self.n_h, self.n_v),
+                                            dtype=complex)
+        self.weights_a_training = np.zeros((n_iterations, self.n_a, self.n_v),
+                                            dtype=complex)
 
 
-            biases_v_step = biases_v[i-1, :]
-            biases_h_step = biases_h[i-1, :]
-            biases_a_step = biases_a[i-1, :]
+        # assign randomly initialized parameters of RBM to first training step
+        self.biases_v_training[0, :] = self.biases_v
+        self.biases_h_training[0, :] = self.biases_h
+        self.biases_a_training[0, :] = self.biases_a
 
-            weights_h_step = weights_h[i-1, :, :]
-            weights_a_step = weights_a[i-1, :, :]
+        self.weights_h_training[0, :, :] = self.weights_h
+        self.weights_a_training[0, :, :] = self.weights_a
 
-            params_step = ([biases_v_step[i, :], biases_h_step[i, :],
-                            biases_a_step[i, :], weights_h_step[i, :, :],
-                            weights_a_step[i, :, :]])
-            #calculate the updates for the parameters
+
+        self.fidelities_training = np.zeros(n_iterations)
+
+        for i in range(1, n_iterations):
+
+            # set current parameters
+            biases_v_step = self.biases_v_training[i-1, :]
+            biases_h_step = self.biases_h_training[i-1, :]
+            biases_a_step = self.biases_a_training[i-1, :]
+
+            weights_h_step = self.weights_h_training[i-1, :, :]
+            weights_a_step = self.weights_a_training[i-1, :, :]
+
+            #wrap parameters as list to pass to functions later
+            params_step = ([biases_v_step, biases_h_step, biases_a_step,
+                            weights_h_step, weights_a_step])
+
+            #calculate the fidelity
+            #print(params_step)
+            fidelities[i] = self.fidelity(i, rho_true)
+
+            # output for current step
+            print("Step " + str(i))
+            print("Current Fidelity: " + str(fidelities[i]))
 
             #stochastic_gradient_descent: build random subsets for each step
             rand_subsets = np.zeros((n_bases, subset_size))
             for j in range(n_bases):
                 rand_subsets[j, :] = random_subset(samples[j, :], subset_size)
 
-            #initialize gradients
-            gradient_bias_v = np.zeros(self.n_v)
-            gradient_bias_h = np.zeros(self.n_h)
-            gradient_bias_a = np.zeros(self.n_a)
+            #calculate the updates for the parameters
 
-            gradient_weight_h = np.zeros((self.n_h, self.n_v))
-            gradient_weight_a = np.zeros((self.n_a, self.n_v))
+            #initialize gradients
+            gradient_bias_v_r = np.zeros(self.n_v, dtype=float)
+            gradient_bias_v_c = np.zeros(self.n_v, dtype=complex)
+
+            gradient_bias_h_r = np.zeros(self.n_h, dtype=float)
+            gradient_bias_h_c = np.zeros(self.n_h, dtype=complex)
+
+            gradient_bias_a_r = np.zeros(self.n_a, dtype=float)
+            gradient_bias_a_c = np.zeros(self.n_a, dtype=complex)
+
+            gradient_weight_h_r = np.zeros((self.n_h, self.n_v), dtype=float)
+            gradient_weight_h_c = np.zeros((self.n_h, self.n_v), dtype=complex)
+
+            gradient_weight_a_r = np.zeros((self.n_a, self.n_v), dtype=float)
+            gradient_weight_a_c = np.zeros((self.n_a, self.n_v), dtype=complex)
 
             #calculate derivatives for each basis
+            """
             for k in range(n_bases):
 
                 # first part
@@ -317,57 +380,34 @@ class RBM():
                                     :], params_step, "bias_v")/n_basis_samples)
 
                 #MCMC partt
+            """
 
 
 
 
 
-            #update the perameters
-            biases_v[i, :] = biases_v_step - lr * gradient_bias_v
-            biases_h[i, :] = biases_h_step - lr * gradient_bias_h
-            biases_a[i, :] = biases_a_step - lr * gradient_bias_a
+            #update the perameters, combine real and complex gradients
+            self.biases_v_training[i, :] = biases_v_step - lr * (gradient_bias_v_r + 1j * gradient_bias_v_c)
+            self.biases_h_training[i, :] = biases_h_step - lr * (gradient_bias_h_r + 1j * gradient_bias_h_c)
+            self.biases_a_training[i, :] = biases_a_step - lr * (gradient_bias_a_r + 1j * gradient_bias_a_c)
 
-            weights_h[i, :, :] = weights_h_step - lr * gradient_weight_h
-            weights_a[i, :, :] = weights_a_step - lr * gradient_weight_a
-
-            #calculate the fidelity
-            params = ([biases_v[i, :], biases_h[i, :], biases_a[i, :],
-                       weights_h[i, :, :], weights_a[i, :, :]])
-
-            fidelities[i] = fidelity(params, rho_true)
-
-
-            # output for current step
-            print("Step " + str(i))
-            print("Current Fidelity: " + str(fidelities[i]))
-
-
-
-
-
+            self.weights_h_training[i, :, :] = weights_h_step - lr * (gradient_weight_h_r + 1j*gradient_weight_h_c)
+            self.weights_a_training[i, :, :] = weights_a_step - lr * (gradient_weight_a_r + 1j*gradient_weight_a_c)
 
 'Functions'
 
 def state2index(state, n_qubits):
     'transforms a state to its associated index'
 
-def calc_psi(bias_v, bias_h, bias_a, weight_h, weight_a ; v, a):
+def calc_psi(bias_v, bias_h, bias_a, weight_h, weight_a, v, a):
     'calculate the probability p(v, a) encoded by an RBM'
 
     P = np.exp(np.sum(np.log(1 + np.exp(np.dot(weight_h, v) + bias_h)), axis=0)
-               + np.dot(a.T np.dot(weight_a, v)) + np.dot(bias_v.T, v)
+               + np.dot(a.T, np.dot(weight_a, v)) + np.dot(bias_v.T, v)
                + np.dot(bias_a.T, a))
     return(P)
 
-def calc_rho_ij(bias_v, bias_h, bias_a, weight_h, weight_a; i, j):
-    'calculates one density matrix element specified by (v1, v2)'
 
-    rho_ij = 0
-    for i in range(2**self.n_a):
-        rho_ij += (calc_psi(bias_v, bias_h, bias_a, weight_h, weight_a; v1, a)
-                    * np.conj(calc_psi(bias_v, bias_h, bias_a, weight_h,
-                              weight_a; v2, a)))
-    return(rho_ij)
 
 def random_subset(set, subset_size):
     """ determines a random subset with size=subset_size from set
@@ -380,20 +420,6 @@ def random_subset(set, subset_size):
     return(subset)
 
 
-def fidelity(network_params, rho_true):
-    """Calculates the fidelity of the NN-density matrix and the true density
-    matrix"""
-
-    bias_v = network_params[0]
-    bias_h = network_params[1]
-    bias_a = network_params[2]
-    weight_h = network_params[3]
-    weight_a = network_params[4]
-
-    rho_NN = [(calc_rho_ij(bias_v, bias_h, bias_a, weight_h, weight_a; i, j) for
-            i in range(2**self.n_qubits) for j in range(2**self.n_qubits))]
-
-    fidelity = np.trace( sqrtm( sqrtm(rho_NN) @ rho_true @ sqrtm(rho_NN)))
 
 
 def metropolis_hastings(n_samples):
@@ -408,7 +434,7 @@ def metropolis_hastings(n_samples):
         r = np.random.randint(0, len(samples[i]))
         proposed_sample[r] = np.abs(proposed_sample[r] - 1) #flips 0<->1
 
-        replace p with calc_rho
+        #replace p with calc_rho
         p_a = np.min(np.array([1, (calc_rho_ij(proposed_sample)
                                     /calc_rho_ij(previous_sample))]))
 

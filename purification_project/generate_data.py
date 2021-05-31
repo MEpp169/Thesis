@@ -84,7 +84,6 @@ class random_density_matrix:
     def generate_samples(self, n_samples):
         cumulative_sums = np.cumsum(np.diagonal(self.matrix))
         samples = []
-        print(cumulative_sums)
 
         for n in range(n_samples):
             sample_prob = np.random.uniform()
@@ -97,6 +96,23 @@ class random_density_matrix:
         """transform the density matrix to another basis, where the
             transformation is given by some unitary U"""
         self.matrix =  U_global @ self.matrix @ np.conj(U_global).T
+
+    def generate_samples_all_bases(self, n_samples):
+
+        n_bases = 3**self.n_spins # for pauli operators --> not general!
+
+        samples = np.empty((n_bases, n_samples), dtype="U2") # rows: bases, columns: n_samples
+
+        all_transformations = generate_basis_transformations(pauli_matrices,
+                                                             self.n_spins)
+
+        for (i, trafo) in zip(range(len(all_transformations)),
+                              all_transformations):
+            new_rho = random_density_matrix(self.n_spins)
+            new_rho.matrix = np.copy(self.matrix) #have to be identical!
+            new_rho.change_basis(trafo)
+            samples[i, :] = new_rho.generate_samples(n_samples)
+        return(samples)
 
 #functions
 
@@ -118,7 +134,6 @@ def total_basis_transform(local_transforms):
     return(U)
 
 def index2state(index, n_qubits):
-    print(index)
     'transforms an index into a n-qubit state'
     return(bin(index)[2:].zfill(n_qubits))
     #return( np.binary_repr(index, n_qubits))
@@ -156,22 +171,3 @@ def generate_basis_transformations(single_basis, n_qubits):
         total_transforms.append(total_basis_transform(single_transforms[i]))
 
     return(total_transforms)
-
-def generate_samples_all_bases(n_spins, n_samples):
-
-    reference_rho = random_density_matrix(n_spins)
-    n_bases = 3**n_spins # for pauli operators --> not general!
-
-    samples = np.empty((n_bases, n_samples), dtype="U2") # rows: bases, columns: n_samples
-
-    all_transformations = generate_basis_transformations(pauli_matrices,
-                                                         n_spins)
-
-    for (i, trafo) in zip(range(len(all_transformations)), all_transformations):
-        rho = random_density_matrix(n_spins)
-        rho.matrix = reference_rho.matrix #have to be identical!
-        rho.change_basis(trafo)
-        samples[i, :] = rho.generate_samples(n_samples)
-    return(samples)
-
-print(index2state(3, 2))
