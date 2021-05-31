@@ -179,4 +179,14 @@ While we have shown that it is generally possibe to rewrite single-qubit gates
 in terms of POVM distributions, they lead to energy functionals that are too
 complicated to be implemented efficiently. Hence we conclude that it is not
 worth pursuing this approach.
+
+
+SKETCHES
+
+Derivatives w.r.t. real and imaginary part of weights (or parameters in general)
+\begin{align}
+    \frac{\partial \mathcal{L}}{\partial\Re(w_{ij})} &= \frac{\partial \mathcal{L}}{\partial w_{ij}} + \frac{\partial \mathcal{L}}{\partial \bar{w}_{ij}} \\
+    \frac{\partial \mathcal{L}}{\partial\Im(w_{ij})} &= i\left(\frac{\partial \mathcal{L}}{\partial w_{ij}} - \frac{\partial \mathcal{L}}{\partial \bar{w}_{ij}}\right)
+\end{align}
+Differentiate $\mathcal{L}$ \textbf{as if} $w$ and $\bar{w}$ were independent variables (Wirtinger derivative).
 \end{document}
