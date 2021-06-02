@@ -44,14 +44,14 @@ class RBM():
         self.n_a = n_a
 
         'Initialize parameters of RBM'
-        self.biases_v = np.random.rand(self.n_v) + 1j * np.random.rand(self.n_v)
-        self.biases_h = np.random.rand(self.n_h) + 1j * np.random.rand(self.n_h)
-        self.biases_a = np.random.rand(self.n_a) + 1j * np.random.rand(self.n_a)
+        self.biases_v = (np.random.uniform(-1, 1, (self.n_v)) + 1j * np.random.uniform(-1, 1, (self.n_v)))
+        self.biases_h = (np.random.uniform(-1, 1, (self.n_h)) + 1j * np.random.uniform(-1, 1, (self.n_h)))
+        self.biases_a = (np.random.uniform(-1, 1, (self.n_a)) + 1j * np.random.uniform(-1, 1, (self.n_a)))
 
-        self.weights_h = (np.random.rand(self.n_h, self.n_v) +
-                            1j * np.random.rand(self.n_h, self.n_v))
-        self.weights_a = (np.random.rand(self.n_a, self.n_v) +
-                            1j * np.random.rand(self.n_a, self.n_v))
+        self.weights_h = ((np.random.uniform(-1, 1, (self.n_h, self.n_v)) +
+                            1j * np.random.uniform(-1, 1, (self.n_h, self.n_v))))
+        self.weights_a = ((np.random.uniform(-1, 1, (self.n_a, self.n_v)) +
+                            1j * np.random.uniform(-1, 1, (self.n_a, self.n_v))))
 
 
     def derivative_bias_v(self, v1, v2, part):
@@ -256,6 +256,18 @@ class RBM():
 
         return(total_grad_r, total_grad_i)
 
+    def calc_rho_NN(self):
+        rho_NN = np.zeros((2**self.n_v, 2**self.n_v), dtype=complex)
+        for i in range(2**self.n_v):
+            v1 = np.array([sample2conf(index2state(i, self.n_v))]).T
+            for j in range(2**self.n_v):
+                v2 = np.array([sample2conf(index2state(j, self.n_v))]).T
+                rho_NN[i, j] = (self.calc_rho_ij(self.biases_v, self.biases_h,
+                                self.biases_a, self.weights_h, self.weights_a,
+                                v1, v2))
+        self.rho_encoded = rho_NN
+
+
     def fidelity(self, learning_step, rho_true):
         """Calculates the fidelity of the NN-density matrix and the true density
         matrix"""
@@ -269,11 +281,12 @@ class RBM():
 
         rho_NN = np.zeros((2**self.n_v, 2**self.n_v), dtype=complex)
         for i in range(2**self.n_v):
+            v1 = np.array([sample2conf(index2state(i, self.n_v))]).T
             for j in range(2**self.n_v):
+                v2 = np.array([sample2conf(index2state(j, self.n_v))]).T
                 rho_NN[i, j] = (self.calc_rho_ij(bias_v, bias_h, bias_a,
-                                weight_h, weight_a, i, j))
+                                weight_h, weight_a, v1, v2))
 
-        print(rho_NN)
         #print(rho_true)
         fidelity = np.trace( sqrtm( sqrtm(rho_NN) @ rho_true @ sqrtm(rho_NN)))
 
@@ -281,12 +294,31 @@ class RBM():
         'calculates one density matrix element specified by (v1, v2)'
 
         rho_ij = 0
+
         for a in range(2**self.n_a):
-            rho_ij += (calc_psi(bias_v, bias_h, bias_a, weight_h, weight_a, i, a)
-                        * np.conj(calc_psi(bias_v, bias_h, bias_a, weight_h,
-                                  weight_a, j, a)))
+            a_conf = np.array([sample2conf(index2state(a, self.n_a))]).T
+            rho_ij += (self.calc_psi(bias_v, bias_h, bias_a, weight_h, weight_a, i, a_conf)
+                        * np.conj(self.calc_psi(bias_v, bias_h, bias_a, weight_h,
+                                    weight_a, j, a_conf)))
         return(rho_ij)
 
+    def calc_psi(self, bias_v, bias_h, bias_a, weight_h, weight_a, v, a):
+        'calculate the probability p(v, a) encoded by an RBM'
+        P = np.exp(np.sum(np.log(1 + np.exp(weight_h @ v + np.array([bias_h]).T)), axis=0)
+                   + np.dot(a.T, weight_a @ v ) + np.dot(bias_v.T, v)
+                   + np.dot(bias_a.T, a))
+
+        norm = 0
+        for v_prime in range(2**self.n_v):
+            v_prime_conf = np.array([sample2conf(index2state(v_prime, self.n_v))]).T
+            for a_prime in range(2**self.n_a):
+                a_prime_conf = np.array([sample2conf(index2state(a_prime, self.n_a))]).T
+                norm += np.abs(np.exp(np.sum(np.log(1 + np.exp(weight_h @ v_prime_conf +
+                        np.array([bias_h]).T)), axis=0) + np.dot(a_prime_conf.T,
+                        weight_a @ v_prime_conf ) + np.dot(bias_v.T, v_prime_conf) +
+                        np.dot(bias_a.T, a_prime_conf)))**2
+        P /= np.sqrt(norm)
+        return(P)
 
     def stochastic_gradient_descent(self, n_iterations, learning_rate, n_bases,
                                     samples, subset_size, rho_true):
@@ -332,11 +364,11 @@ class RBM():
 
             #calculate the fidelity
             #print(params_step)
-            fidelities[i] = self.fidelity(i, rho_true)
+            self.fidelities_training[i] = self.fidelity(i, rho_true)
 
             # output for current step
             print("Step " + str(i))
-            print("Current Fidelity: " + str(fidelities[i]))
+            print("Current Fidelity: " + str(self.fidelities_training[i]))
 
             #stochastic_gradient_descent: build random subsets for each step
             rand_subsets = np.zeros((n_bases, subset_size))
@@ -394,18 +426,114 @@ class RBM():
             self.weights_h_training[i, :, :] = weights_h_step - lr * (gradient_weight_h_r + 1j*gradient_weight_h_c)
             self.weights_a_training[i, :, :] = weights_a_step - lr * (gradient_weight_a_r + 1j*gradient_weight_a_c)
 
+    def check_rho_valid(self):
+        # use np.around(a, decimals=15) to compare arrays online up to acceptable precision
+        assert (np.conj(np.around(self.rho_encoded.T, decimals = 15)) == np.around(self.rho_encoded, decimals = 15)).all(), "matrix should be hermitian"
+        assert np.round(np.trace(self.rho_encoded), decimals=0) == 1, "trace should be one"
+        print(np.linalg.eigvalsh(self.rho_encoded))
+        assert np.all(np.linalg.eigvalsh(self.rho_encoded) >= 0), "rho should be positive semidefinite"
+        print("The RBM encodes a valiud density matrix")
+
+
+
+    'now update the density matrix according to the new formalism'
+
+    def UBM_update_single(self, alpha, beta, omega, j):
+        'modifies the RBM to output a new state'
+
+        #store old parameters
+
+
+        #new hidden node
+        self.n_h += 1
+
+        #store old parameters
+        old_biases_v = np.copy(self.biases_v)
+        old_biases_h = np.copy(self.biases_h)
+        old_biases_a = np.copy(self.biases_a)
+
+        old_weights_h = np.copy(self.weights_h)
+        old_weights_a = np.copy(self.weights_a)
+
+        self.biases_v[j] = alpha
+
+        self.biases_h = np.zeros(self.n_h, dtype = complex)
+        self.biases_h[:-1] = old_biases_h
+        self.biases_h[-1] = beta + old_biases_v[j]
+
+        self.weights_h = np.zeros((self.n_h, self.n_v), dtype = complex)
+        self.weights_h[:-1, :j] = old_weights_h[:, :j]
+        self.weights_h[-1, j] = omega
+        self.weights_h[:-1, j+1:] = old_weights_h[:, j+1:]
+        #print(self.weights_h)
+
+        # h-h interactions
+        self.weights_X = np.zeros((self.n_h, self.n_h), dtype = complex)
+        self.weights_X[-1, :-1] = old_weights_h[:, j].T
+        self.weights_X[:-1, -1] = old_weights_h[:, j]
+        #print(self.weights_X)
+
+        # a-h interactions
+        self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
+        self.weights_Y[:, -1] = old_weights_a[:, j].T
+        #print(self.weights_Y)
+
+
+
+    def UBM_psi(self, v, a):
+        p = 0
+        for h_prime in range(2**self.n_h): #different procedure for UBM
+            h_prime_conf = sample2conf(index2state(h_prime, self.n_h))
+            p += np.exp(self.UBM_energy(v, h_prime_conf, a))
+
+        norm = 0
+        for v_prime in range(2**self.n_v):
+            v_prime_conf = sample2conf(index2state(v_prime, self.n_v))
+            for a_prime in range(2**self.n_a):
+                a_prime_conf = sample2conf(index2state(a_prime, self.n_a))
+                psi = 0
+                for h_prime in range(2**self.n_h):
+                    h_prime_conf = sample2conf(index2state(h_prime, self.n_h))
+                    psi += np.exp(self.UBM_energy(v_prime_conf, h_prime_conf, a_prime_conf))
+                norm += np.abs(psi)**2
+        p /= np.sqrt(norm)
+        return(p)
+
+    def UBM_calc_rho_ij(self, i, j):
+        'calculates one density matrix element specified by (v1, v2)'
+
+        rho_ij = 0
+        for a in range(2**self.n_a):
+            a_conf = sample2conf(index2state(a, self.n_a))
+            rho_ij += self.UBM_psi(i, a_conf) * np.conj(self.UBM_psi(j, a_conf))
+
+        return(rho_ij)
+
+    def UBM_rho(self):
+        rho_UBM = np.zeros((2**self.n_v, 2**self.n_v), dtype=complex)
+        for i in range(2**self.n_v):
+            v1 = sample2conf(index2state(i, self.n_v))
+            for j in range(2**self.n_v):
+                v2 = sample2conf(index2state(j, self.n_v))
+                rho_UBM[i, j] = self.UBM_calc_rho_ij(v1, v2)
+
+        self.rho_encoded_UBM = rho_UBM
+
+
+    def UBM_energy(self, v, h, a):
+        'calculates the energy of a UBM configuration'
+        E =(np.dot(self.biases_v, v) + np.dot(self.biases_v, v) +
+            np.dot(self.biases_v, v) + np.dot(h, self.weights_h @ v) +
+            np.dot(a, self.weights_a @ v) + 1/2*np.dot(h, self.weights_X @ h) +
+            np.dot(a, self.weights_Y @ h))
+        return(E)
+
 'Functions'
 
 def state2index(state, n_qubits):
     'transforms a state to its associated index'
 
-def calc_psi(bias_v, bias_h, bias_a, weight_h, weight_a, v, a):
-    'calculate the probability p(v, a) encoded by an RBM'
 
-    P = np.exp(np.sum(np.log(1 + np.exp(np.dot(weight_h, v) + bias_h)), axis=0)
-               + np.dot(a.T, np.dot(weight_a, v)) + np.dot(bias_v.T, v)
-               + np.dot(bias_a.T, a))
-    return(P)
 
 
 
@@ -448,6 +576,10 @@ def metropolis_hastings(n_samples):
 
     return(samples)
 
+def index2state(index, n_qubits):
+    'transforms an index into a n-qubit state'
+    return(bin(index)[2:].zfill(n_qubits))
+
 
 def sample2conf(sample):
     """takes as input a measurent string and returns the corresponding values of
@@ -461,3 +593,26 @@ def sample2conf(sample):
 
 def basis_sum(bases_samples):
     """Calculates the derivative over several basis states"""
+
+
+def exp_unitary(n_spins, alpha, beta, omega):
+    'outputs a single-qubit unitary that can be easily implemented in the RBM'
+
+    U = np.zeros((n_spins, n_spins), dtype=complex)
+    U[0, 0] = np.exp(1j*(alpha + beta) + omega)
+    U[0, 1] = -1j*np.exp(1j*(alpha - beta) - omega)
+    U[1, 0] = -1j*np.exp(-1j*(alpha - beta) - omega)
+    U[1, 1] = np.exp(-1j*(alpha + beta) + omega)
+
+    U *= np.exp(1j*np.pi/4)/np.sqrt(2*np.cosh(2*omega))
+
+    return(U)
+
+def exp2spin_unitary(alpha_p, beta_p, omega_p):
+    """converts parameters that describe a unitary in basis vector form into
+    parameters that are in binary spin form"""
+    alpha = np.log(-1j) - 2j*alpha_p - 2*omega_p
+    beta = np.log(-1j) - 2j*beta_p - 2*omega_p
+    omega = -2*np.log(-1j) + 4*omega_p 
+    # A = ...
+    return(alpha, beta, omega)

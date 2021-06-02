@@ -64,6 +64,9 @@ class density_matrix:
         """generate a set of samples from the density matrix to be used for RBM
         training"""
 
+    def unitary_operation(self, U):
+        "given some unitary operation U, update the density matrix"
+        self.matrix_rep = U @ self.matrix_rep @ np.conj(U).T
 
 class random_density_matrix:
     "initialize a random density matrix"
@@ -114,6 +117,15 @@ class random_density_matrix:
             samples[i, :] = new_rho.generate_samples(n_samples)
         return(samples)
 
+
+    def generate_samples(self, n_samples):
+        """generate a set of samples from the density matrix to be used for RBM
+        training"""
+
+    def unitary_operation(self, U):
+        "given some unitary operation U, update the density matrix"
+        self.matrix = U @ self.matrix @ np.conj(U).T
+
 #functions
 
 def local_basis_transform(basis1, basis0):
@@ -133,6 +145,16 @@ def total_basis_transform(local_transforms):
 
     return(U)
 
+def total_unitary(local_unitaries):
+    'builds an n-qubit unitary out of 1-qubit unitaries'
+
+    U = local_unitaries[0]
+    for U_local in local_unitaries[1: ]:
+        U = np.kron(U, U_local)
+
+    return(U)
+
+
 def index2state(index, n_qubits):
     'transforms an index into a n-qubit state'
     return(bin(index)[2:].zfill(n_qubits))
@@ -148,6 +170,10 @@ pauli_y = np.array([ [0, -1j],
 
 pauli_z = np.array([ [1,0],
                      [0,-1] ])
+
+identity = np.array([ [1, 0],
+                      [0, 1] ])
+
 
 pauli_matrices = [pauli_x, pauli_y, pauli_z]
 
