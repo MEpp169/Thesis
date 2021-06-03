@@ -467,27 +467,28 @@ class RBM():
         self.biases_h = np.zeros(self.n_h, dtype = complex)
         self.biases_h[:-1] = old_biases_h
         self.biases_h[-1] = beta + old_biases_v[j]
+        #print(self.biases_h)
 
         self.weights_h = np.zeros((self.n_h, self.n_v), dtype = complex)
         self.weights_h[:-1, :j] = old_weights_h[:, :j]
         self.weights_h[-1, j] = omega
         self.weights_h[:-1, j+1:] = old_weights_h[:, j+1:]
-        print(self.weights_h)
+        #print(self.weights_h)
 
         # h-h interactions
         self.weights_X = np.zeros((self.n_h, self.n_h), dtype = complex)
         self.weights_X[-1, :-1] = old_weights_h[:, j].T
         self.weights_X[:-1, -1] = old_weights_h[:, j]
 
-        print(self.weights_X)
+        #print(self.weights_X)
 
         # a-h interactions
         self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
         self.weights_Y[:, -1] = old_weights_a[:, j].T
         #print(self.weights_Y)
 
-        print(self.weights_X)
-        print(self.weights_Y)
+        #print(self.weights_X)
+        #print(self.weights_Y)
 
 
     def UBM_psi(self, v, a):
@@ -614,8 +615,8 @@ def exp_unitary(n_spins, alpha, beta, omega):
     U[1, 0] = -1j*np.exp(-1j*(alpha - beta) - omega)
     U[1, 1] = np.exp(-1j*(alpha + beta) + omega)
 
-    #U *= np.exp(1j*np.pi/4)/(2*np.cosh(omega))
-    U *= 1/(2*np.cosh(omega))
+    U *= np.exp(1j*np.pi/4)/(2*np.cosh(2*omega))
+    #U *= 1/(2*np.cosh(omega))
 
     return(U)
 
@@ -627,7 +628,7 @@ def exp2spin_unitary(alpha_p, beta_p, omega_p):
     omega = -2*np.log(-1j) + 4*omega_p
     #A =  np.exp(1j*np.pi/4 + 1j*(alpha_p+beta_p) + omega_p)/np.sqrt(2*np.cosh(2*omega))
     A =  np.exp(1j*(alpha_p+beta_p) + omega_p)/(2*np.cosh(omega_p))
-    print(A)
+    #print(A)
     return(alpha, beta, omega, A)
 
 def simple_exp_unitary(n_spins, a, b, c, A):
