@@ -46,13 +46,14 @@ class RBM():
         'Initialize parameters of RBM'
         self.biases_v = (np.random.uniform(-1, 1, (self.n_v)) + 1j * np.random.uniform(-1, 1, (self.n_v)))
         self.biases_h = (np.random.uniform(-1, 1, (self.n_h)) + 1j * np.random.uniform(-1, 1, (self.n_h)))
-        self.biases_a = (np.random.uniform(-1, 1, (self.n_a)) + 1j * np.random.uniform(-1, 1, (self.n_a)))
+        #self.biases_a = (np.random.uniform(-1, 1, (self.n_a)) + 1j * np.random.uniform(-1, 1, (self.n_a)))
+        self.biases_a = np.zeros(self.n_a)
 
         self.weights_h = ((np.random.uniform(-1, 1, (self.n_h, self.n_v)) +
                             1j * np.random.uniform(-1, 1, (self.n_h, self.n_v))))
-        self.weights_a = ((np.random.uniform(-1, 1, (self.n_a, self.n_v)) +
-                            1j * np.random.uniform(-1, 1, (self.n_a, self.n_v))))
-
+        #self.weights_a = ((np.random.uniform(-1, 1, (self.n_a, self.n_v)) +
+                            #1j * np.random.uniform(-1, 1, (self.n_a, self.n_v))))
+        self.weights_a = np.zeros((self.n_a, self.n_v))
 
     def derivative_bias_v(self, v1, v2, part):
         """returns the derivative of log(rho_unnormalized) w.r.t. the visible
@@ -428,11 +429,17 @@ class RBM():
 
     def check_rho_valid(self):
         # use np.around(a, decimals=15) to compare arrays online up to acceptable precision
-        assert (np.conj(np.around(self.rho_encoded.T, decimals = 15)) == np.around(self.rho_encoded, decimals = 15)).all(), "matrix should be hermitian"
-        assert np.round(np.trace(self.rho_encoded), decimals=0) == 1, "trace should be one"
-        print(np.linalg.eigvalsh(self.rho_encoded))
-        assert np.all(np.linalg.eigvalsh(self.rho_encoded) >= 0), "rho should be positive semidefinite"
-        print("The RBM encodes a valiud density matrix")
+        assert ((np.conj(np.around(self.rho_encoded.T, decimals = 15)) ==
+                    np.around(self.rho_encoded, decimals = 15)).all(),
+                    "matrix should be hermitian")
+
+        assert (np.round(np.trace(self.rho_encoded), decimals=0) == 1,
+                "trace should be one")
+
+        assert (np.all(np.linalg.eigvalsh(self.rho_encoded) >= 0),
+                "rho should be positive semidefinite")
+
+        print("The RBM encodes a valid density matrix")
 
 
 
@@ -465,19 +472,22 @@ class RBM():
         self.weights_h[:-1, :j] = old_weights_h[:, :j]
         self.weights_h[-1, j] = omega
         self.weights_h[:-1, j+1:] = old_weights_h[:, j+1:]
-        #print(self.weights_h)
+        print(self.weights_h)
 
         # h-h interactions
         self.weights_X = np.zeros((self.n_h, self.n_h), dtype = complex)
         self.weights_X[-1, :-1] = old_weights_h[:, j].T
         self.weights_X[:-1, -1] = old_weights_h[:, j]
-        #print(self.weights_X)
+
+        print(self.weights_X)
 
         # a-h interactions
         self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
         self.weights_Y[:, -1] = old_weights_a[:, j].T
         #print(self.weights_Y)
 
+        print(self.weights_X)
+        print(self.weights_Y)
 
 
     def UBM_psi(self, v, a):
@@ -598,13 +608,14 @@ def basis_sum(bases_samples):
 def exp_unitary(n_spins, alpha, beta, omega):
     'outputs a single-qubit unitary that can be easily implemented in the RBM'
 
-    U = np.zeros((n_spins, n_spins), dtype=complex)
+    U = np.zeros((2**n_spins, 2**n_spins), dtype=complex)
     U[0, 0] = np.exp(1j*(alpha + beta) + omega)
     U[0, 1] = -1j*np.exp(1j*(alpha - beta) - omega)
     U[1, 0] = -1j*np.exp(-1j*(alpha - beta) - omega)
     U[1, 1] = np.exp(-1j*(alpha + beta) + omega)
 
-    U *= np.exp(1j*np.pi/4)/np.sqrt(2*np.cosh(2*omega))
+    #U *= np.exp(1j*np.pi/4)/(2*np.cosh(omega))
+    U *= 1/(2*np.cosh(omega))
 
     return(U)
 
@@ -613,6 +624,21 @@ def exp2spin_unitary(alpha_p, beta_p, omega_p):
     parameters that are in binary spin form"""
     alpha = np.log(-1j) - 2j*alpha_p - 2*omega_p
     beta = np.log(-1j) - 2j*beta_p - 2*omega_p
-    omega = -2*np.log(-1j) + 4*omega_p 
-    # A = ...
-    return(alpha, beta, omega)
+    omega = -2*np.log(-1j) + 4*omega_p
+    #A =  np.exp(1j*np.pi/4 + 1j*(alpha_p+beta_p) + omega_p)/np.sqrt(2*np.cosh(2*omega))
+    A =  np.exp(1j*(alpha_p+beta_p) + omega_p)/(2*np.cosh(omega_p))
+    print(A)
+    return(alpha, beta, omega, A)
+
+def simple_exp_unitary(n_spins, a, b, c, A):
+    U = np.zeros((2**n_spins, 2**n_spins), dtype=complex)
+    U[0, 0] = 1
+    U[0, 1] = np.exp(b)
+    U[1, 0] = np.exp(a)
+    U[1, 1] = np.exp(a + b + c)
+
+    #U *= np.exp(1j*np.pi/4)/(2*np.cosh(omega))
+    U *= A
+
+    return(U)
+print(np.exp(30))
