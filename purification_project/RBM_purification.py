@@ -46,14 +46,14 @@ class RBM():
         'Initialize parameters of RBM'
         self.biases_v = (np.random.uniform(-1, 1, (self.n_v)) + 1j * np.random.uniform(-1, 1, (self.n_v)))
         self.biases_h = (np.random.uniform(-1, 1, (self.n_h)) + 1j * np.random.uniform(-1, 1, (self.n_h)))
-        #self.biases_a = (np.random.uniform(-1, 1, (self.n_a)) + 1j * np.random.uniform(-1, 1, (self.n_a)))
-        self.biases_a = np.zeros(self.n_a)
+        self.biases_a = (np.random.uniform(-1, 1, (self.n_a)) + 1j * np.random.uniform(-1, 1, (self.n_a)))
+        #self.biases_a = np.zeros(self.n_a)
 
         self.weights_h = ((np.random.uniform(-1, 1, (self.n_h, self.n_v)) +
                             1j * np.random.uniform(-1, 1, (self.n_h, self.n_v))))
-        #self.weights_a = ((np.random.uniform(-1, 1, (self.n_a, self.n_v)) +
-                            #1j * np.random.uniform(-1, 1, (self.n_a, self.n_v))))
-        self.weights_a = np.zeros((self.n_a, self.n_v))
+        self.weights_a = 5*((np.random.uniform(-1, 1, (self.n_a, self.n_v)) +
+                            1j * np.random.uniform(-1, 1, (self.n_a, self.n_v))))
+        #self.weights_a = np.zeros((self.n_a, self.n_v))
 
     def derivative_bias_v(self, v1, v2, part):
         """returns the derivative of log(rho_unnormalized) w.r.t. the visible
@@ -445,7 +445,7 @@ class RBM():
 
     'now update the density matrix according to the new formalism'
 
-    def UBM_update_single(self, alpha, beta, omega, j):
+    def UBM_update_single(self, alpha, beta, omega, A, j):
         'modifies the RBM to output a new state'
 
         #store old parameters
@@ -485,17 +485,19 @@ class RBM():
         # a-h interactions
         self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
         self.weights_Y[:, -1] = old_weights_a[:, j].T
+
         #print(self.weights_Y)
 
         #print(self.weights_X)
         #print(self.weights_Y)
+        self.A = A
 
 
     def UBM_psi(self, v, a):
         p = 0
         for h_prime in range(2**self.n_h): #different procedure for UBM
             h_prime_conf = sample2conf(index2state(h_prime, self.n_h))
-            p += np.exp(self.UBM_energy(v, h_prime_conf, a))
+            p +=  np.exp(self.UBM_energy(v, h_prime_conf, a))
 
         norm = 0
         for v_prime in range(2**self.n_v):
@@ -533,8 +535,8 @@ class RBM():
 
     def UBM_energy(self, v, h, a):
         'calculates the energy of a UBM configuration'
-        E =(np.dot(self.biases_v, v) + np.dot(self.biases_v, v) +
-            np.dot(self.biases_v, v) + np.dot(h, self.weights_h @ v) +
+        E =(np.dot(self.biases_v, v) + np.dot(self.biases_h, h) +
+            np.dot(self.biases_a, a) + np.dot(h, self.weights_h @ v) +
             np.dot(a, self.weights_a @ v) + 1/2*np.dot(h, self.weights_X @ h) +
             np.dot(a, self.weights_Y @ h))
         return(E)
@@ -615,7 +617,7 @@ def exp_unitary(n_spins, alpha, beta, omega):
     U[1, 0] = -1j*np.exp(-1j*(alpha - beta) - omega)
     U[1, 1] = np.exp(-1j*(alpha + beta) + omega)
 
-    U *= np.exp(1j*np.pi/4)/(2*np.cosh(2*omega))
+    U *= np.exp(1j*np.pi/4)/np.sqrt(2*np.cosh(2*omega))
     #U *= 1/(2*np.cosh(omega))
 
     return(U)
@@ -626,9 +628,7 @@ def exp2spin_unitary(alpha_p, beta_p, omega_p):
     alpha = np.log(-1j) - 2j*alpha_p - 2*omega_p
     beta = np.log(-1j) - 2j*beta_p - 2*omega_p
     omega = -2*np.log(-1j) + 4*omega_p
-    #A =  np.exp(1j*np.pi/4 + 1j*(alpha_p+beta_p) + omega_p)/np.sqrt(2*np.cosh(2*omega))
-    A =  np.exp(1j*(alpha_p+beta_p) + omega_p)/(2*np.cosh(omega_p))
-    #print(A)
+    A =  np.exp(1j*np.pi/4 + 1j*(alpha_p+beta_p) + omega_p)/np.sqrt(2*np.cosh(2*omega_p))
     return(alpha, beta, omega, A)
 
 def simple_exp_unitary(n_spins, a, b, c, A):
@@ -642,4 +642,8 @@ def simple_exp_unitary(n_spins, a, b, c, A):
     U *= A
 
     return(U)
-print(np.exp(30))
+
+
+def fidelity(A, B):
+    "returns the fidelity of two density matrices"
+    return(np.trace( sqrtm( sqrtm(A) @ B @ sqrtm(A))))

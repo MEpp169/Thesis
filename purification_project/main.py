@@ -64,25 +64,3 @@ print(boltz_machine.biases_a)
 print(boltz_machine.calc_rho_NN())
 #plot the results
 """
-
-boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units)
-boltz_machine.calc_rho_NN()
-boltz_machine.check_rho_valid()
-
-print(np.trace(boltz_machine.rho_encoded))
-print(boltz_machine.rho_encoded)
-
-
-# apply simple unitary
-
-alpha = 10
-beta = 5
-gamma = 10
-
-U_test = exp_unitary(n_spins, alpha, beta, gamma)
-local_unitaries = [identity, U_test]
-
-test_rho = random_density_matrix(n_spins)
-test_rho.matrix = np.copy(boltz_machine.rho_encoded)
-test_rho.unitary_operation(total_unitary(local_unitaries))
-print(test_rho.matrix)
