@@ -18,7 +18,7 @@ training_steps = 10
 learning_rate = 1.0e-2
 subset_size = 20
 
-boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units)
+boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units, 1)
 boltz_machine.calc_rho_NN()
 boltz_machine.check_rho_valid()
 
@@ -29,9 +29,9 @@ print(np.trace(boltz_machine.rho_encoded @ boltz_machine.rho_encoded))
 #beta = 0
 #omega = 30
 
-alpha = 0.5
-beta = 0.4
-omega = 0.6
+alpha = 0.7
+beta = 0.2
+omega = 0.9
 
 """
 a, b, c = 1, -1, 10
@@ -59,7 +59,7 @@ alpha_RBM, beta_RBM, omega_RBM, A_RBM = exp2spin_unitary(alpha, beta, omega)
 # parameters, simple exponential with 3 real parameters
 
 "initialize random density matrix"
-boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units)
+boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units, 1)
 boltz_machine.calc_rho_NN() #calculate the density matrix
 boltz_machine.check_rho_valid()
 print("trace of rho^2")

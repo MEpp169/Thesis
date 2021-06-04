@@ -29,7 +29,7 @@ from scipy.linalg import sqrtm
 class RBM():
     """Restricted Boltzmann Machine class"""
 
-    def __init__(self, n_v, n_h, n_a):
+    def __init__(self, n_v, n_h, n_a, i):
         """ Initialize Restricted Boltzmann Machine graph structure:
 
         Geometry
@@ -51,7 +51,7 @@ class RBM():
 
         self.weights_h = ((np.random.uniform(-1, 1, (self.n_h, self.n_v)) +
                             1j * np.random.uniform(-1, 1, (self.n_h, self.n_v))))
-        self.weights_a = 5*((np.random.uniform(-1, 1, (self.n_a, self.n_v)) +
+        self.weights_a = i*((np.random.uniform(-1, 1, (self.n_a, self.n_v)) +
                             1j * np.random.uniform(-1, 1, (self.n_a, self.n_v))))
         #self.weights_a = np.zeros((self.n_a, self.n_v))
 
@@ -475,6 +475,7 @@ class RBM():
         self.weights_h[:-1, j+1:] = old_weights_h[:, j+1:]
         #print(self.weights_h)
 
+        self.weights_a[:, j] = np.zeros(self.n_a)
         # h-h interactions
         self.weights_X = np.zeros((self.n_h, self.n_h), dtype = complex)
         self.weights_X[-1, :-1] = old_weights_h[:, j].T
