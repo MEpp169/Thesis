@@ -18,11 +18,6 @@ training_steps = 10
 learning_rate = 1.0e-2
 subset_size = 20
 
-boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units, 1)
-boltz_machine.calc_rho_NN()
-boltz_machine.check_rho_valid()
-
-print(np.trace(boltz_machine.rho_encoded @ boltz_machine.rho_encoded))
 # apply simple unitary
 
 #alpha = 0

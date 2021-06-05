@@ -29,7 +29,7 @@ from scipy.linalg import sqrtm
 class RBM():
     """Restricted Boltzmann Machine class"""
 
-    def __init__(self, n_v, n_h, n_a, i):
+    def __init__(self, n_v, n_h, n_a, i=1):
         """ Initialize Restricted Boltzmann Machine graph structure:
 
         Geometry
@@ -304,17 +304,27 @@ class RBM():
         return(rho_ij)
 
     def calc_psi(self, bias_v, bias_h, bias_a, weight_h, weight_a, v, a):
+        v = 2*v-1
+        a = 2*a-1
         'calculate the probability p(v, a) encoded by an RBM'
+        """old version: h = {0, 1}
         P = np.exp(np.sum(np.log(1 + np.exp(weight_h @ v + np.array([bias_h]).T)), axis=0)
                    + np.dot(a.T, weight_a @ v ) + np.dot(bias_v.T, v)
                    + np.dot(bias_a.T, a))
+        """
 
+        "new version: h = {-1,1}"
+        P = np.exp(np.sum(np.log(np.exp(-weight_h @ v - np.array([bias_h]).T) + np.exp(weight_h @ v + np.array([bias_h]).T)), axis=0)
+                   + np.dot(a.T, weight_a @ v ) + np.dot(bias_v.T, v)
+                   + np.dot(bias_a.T, a))
         norm = 0
         for v_prime in range(2**self.n_v):
             v_prime_conf = np.array([sample2conf(index2state(v_prime, self.n_v))]).T
+            v_prime_conf = 2*v_prime_conf-1
             for a_prime in range(2**self.n_a):
                 a_prime_conf = np.array([sample2conf(index2state(a_prime, self.n_a))]).T
-                norm += np.abs(np.exp(np.sum(np.log(1 + np.exp(weight_h @ v_prime_conf +
+                a_prime_conf = 2*a_prime_conf-1
+                norm += np.abs(np.exp(np.sum(np.log(np.exp(-weight_h @  v_prime_conf  -np.array([bias_h]).T) + np.exp(weight_h @ v_prime_conf +
                         np.array([bias_h]).T)), axis=0) + np.dot(a_prime_conf.T,
                         weight_a @ v_prime_conf ) + np.dot(bias_v.T, v_prime_conf) +
                         np.dot(bias_a.T, a_prime_conf)))**2
@@ -448,8 +458,6 @@ class RBM():
     def UBM_update_single(self, alpha, beta, omega, A, j):
         'modifies the RBM to output a new state'
 
-        #store old parameters
-
 
         #new hidden node
         self.n_h += 1
@@ -486,6 +494,7 @@ class RBM():
         # a-h interactions
         self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
         self.weights_Y[:, -1] = old_weights_a[:, j].T
+
 
         #print(self.weights_Y)
 
@@ -535,12 +544,82 @@ class RBM():
 
 
     def UBM_energy(self, v, h, a):
+        v = 2*v-1
+        h = 2*h-1
+        a = 2*a-1
         'calculates the energy of a UBM configuration'
         E =(np.dot(self.biases_v, v) + np.dot(self.biases_h, h) +
             np.dot(self.biases_a, a) + np.dot(h, self.weights_h @ v) +
             np.dot(a, self.weights_a @ v) + 1/2*np.dot(h, self.weights_X @ h) +
-            np.dot(a, self.weights_Y @ h))
+            np.dot(a, self.weights_Y @ h) + 1/2*np.dot(v, self.weights_Z @ v))
         return(E)
+
+
+    def UBM_update_double(self, j_ind, k_ind, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega):
+        """Updates the RBM to realize the effect of a 2-qubit gate
+            - acts on qubits j, k
+
+        """
+
+        lambda_entry = Lambda[0, 1]
+        gamma_entry = Gamma[0, 1]
+        #two new hidden nodes
+        self.n_h += 2
+
+        #store old parameters
+        old_biases_v = np.copy(self.biases_v)
+        old_biases_h = np.copy(self.biases_h)
+        old_biases_a = np.copy(self.biases_a)
+
+        old_weights_h = np.copy(self.weights_h)
+        old_weights_a = np.copy(self.weights_a)
+
+
+        #update visible biases
+        self.biases_v[j_ind] = alpha_1
+        self.biases_v[k_ind] = alpha_2
+
+        #update hidden biases
+        self.biases_h = np.zeros(self.n_h, dtype=complex)
+        self.biases_h[:-2] = old_biases_h
+        self.biases_h[-2] = beta_1 + old_biases_v[j_ind]
+        self.biases_h[-1] = beta_2 + old_biases_v[k_ind]
+
+        #update weight_matrix
+        self.weights_h = np.zeros((self.n_h, self.n_v), dtype=complex)
+        self.weights_h[:-2, :j_ind] = old_weights_h[:, :j_ind]
+        self.weights_h[:-2, j_ind+1:k_ind] = old_weights_h[:, j_ind+1:k_ind]
+        self.weights_h[:-2, k_ind+1:] = old_weights_h[:, k_ind+1:]
+        self.weights_h[-2, j_ind] = Omega[0, 0]
+        self.weights_h[-1, j_ind] = Omega[1, 0]
+        self.weights_h[-2, k_ind] = Omega[0, 1]
+        self.weights_h[-1, k_ind] = Omega[1, 1]
+
+        #introduce X (=h-h matrix)
+        self.weights_X = np.zeros((self.n_h, self.n_h), dtype=complex)
+        self.weights_X[-2, :-2] = old_weights_h[:, j_ind].T
+        self.weights_X[-1, :-2] = old_weights_h[:, k_ind].T
+        self.weights_X[:-2, -2] = old_weights_h[:, j_ind]
+        self.weights_X[:-2, -1] = old_weights_h[:, k_ind]
+        self.weights_X[-1, -2] = gamma_entry
+        self.weights_X[-2, -1] = gamma_entry
+
+        #introduce Y (=v-v matrix)
+        self.weights_Z = np.zeros((self.n_v, self.n_v), dtype=complex)
+        self.weights_Z[j_ind, k_ind] = lambda_entry
+        self.weights_Z[k_ind, j_ind] = lambda_entry
+
+        # a-h interactions
+        self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
+        self.weights_Y[:, -2] = old_weights_a[:, j_ind].T
+        self.weights_Y[:, -1] = old_weights_a[:, k_ind].T
+
+        #don't forget a-v zeroing!
+        self.weights_a[:, j_ind] = np.zeros(self.n_a)
+        self.weights_a[:, k_ind] = np.zeros(self.n_a)
+
+
+
 
 'Functions'
 
@@ -648,3 +727,32 @@ def simple_exp_unitary(n_spins, a, b, c, A):
 def fidelity(A, B):
     "returns the fidelity of two density matrices"
     return(np.trace( sqrtm( sqrtm(A) @ B @ sqrtm(A))))
+
+
+def two_body_entangling(lam):
+    "returns an easy-to-implement two body unitary"
+
+    U = 1/2 * np.ones((4, 4), dtype=complex)
+
+    U[0, :] *=  np.exp(1j*lam)
+    U[0, 0] *= 1j
+    U[0, 3] *= -1j
+
+    U[1, :] *=  np.exp(-1j*lam)
+    U[1, 1] *= 1j
+    U[1, 2] *= -1j
+
+    U[2, :] *=  np.exp(-1j*lam)
+    U[2, 1] *= -1j
+    U[2, 2] *= 1j
+
+    U[3, :] *=  np.exp(1j*lam)
+    U[3, 0] *= -1j
+    U[3, 3] *= 1j
+
+    return(U)
+
+
+def dagger(A):
+    "returns hermitian conjugate of matrix"
+    return(np.conj(A).T)
