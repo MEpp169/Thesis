@@ -304,32 +304,45 @@ class RBM():
         return(rho_ij)
 
     def calc_psi(self, bias_v, bias_h, bias_a, weight_h, weight_a, v, a):
-        v = 2*v-1
-        a = 2*a-1
-        'calculate the probability p(v, a) encoded by an RBM'
-        """old version: h = {0, 1}
-        P = np.exp(np.sum(np.log(1 + np.exp(weight_h @ v + np.array([bias_h]).T)), axis=0)
-                   + np.dot(a.T, weight_a @ v ) + np.dot(bias_v.T, v)
-                   + np.dot(bias_a.T, a))
-        """
+        if self.nodeType == "-11":
+            v = 2*v-1
+            a = 2*a-1
+            P = np.exp(np.sum(np.log(np.exp(-weight_h @ v - np.array([bias_h]).T) + np.exp(weight_h @ v + np.array([bias_h]).T)), axis=0)
+                       + np.dot(a.T, weight_a @ v ) + np.dot(bias_v.T, v) + np.dot(bias_a.T, a))
 
-        "new version: h = {-1,1}"
-        P = np.exp(np.sum(np.log(np.exp(-weight_h @ v - np.array([bias_h]).T) + np.exp(weight_h @ v + np.array([bias_h]).T)), axis=0)
-                   + np.dot(a.T, weight_a @ v ) + np.dot(bias_v.T, v)
-                   + np.dot(bias_a.T, a))
-        norm = 0
-        for v_prime in range(2**self.n_v):
-            v_prime_conf = np.array([sample2conf(index2state(v_prime, self.n_v))]).T
-            v_prime_conf = 2*v_prime_conf-1
-            for a_prime in range(2**self.n_a):
-                a_prime_conf = np.array([sample2conf(index2state(a_prime, self.n_a))]).T
-                a_prime_conf = 2*a_prime_conf-1
-                norm += np.abs(np.exp(np.sum(np.log(np.exp(-weight_h @  v_prime_conf  -np.array([bias_h]).T) + np.exp(weight_h @ v_prime_conf +
-                        np.array([bias_h]).T)), axis=0) + np.dot(a_prime_conf.T,
-                        weight_a @ v_prime_conf ) + np.dot(bias_v.T, v_prime_conf) +
-                        np.dot(bias_a.T, a_prime_conf)))**2
-        P /= np.sqrt(norm)
-        return(P)
+            norm = 0
+
+            for v_prime in range(2**self.n_v):
+                v_prime_conf = np.array([sample2conf(index2state(v_prime, self.n_v))]).T
+                v_prime_conf = 2*v_prime_conf-1
+                for a_prime in range(2**self.n_a):
+                    a_prime_conf = np.array([sample2conf(index2state(a_prime, self.n_a))]).T
+                    a_prime_conf = 2*a_prime_conf-1
+                    norm += np.abs(np.exp(np.sum(np.log(np.exp(-weight_h @  v_prime_conf  -np.array([bias_h]).T) + np.exp(weight_h @ v_prime_conf +
+                            np.array([bias_h]).T)), axis=0) + np.dot(a_prime_conf.T,
+                            weight_a @ v_prime_conf ) + np.dot(bias_v.T, v_prime_conf) +
+                            np.dot(bias_a.T, a_prime_conf)))**2
+
+
+        elif self.nodeType == "01":
+            P = np.exp(np.sum(np.log(1 + np.exp(weight_h @ v + np.array([bias_h]).T)), axis=0)
+                       + np.dot(a.T, weight_a @ v ) + np.dot(bias_v.T, v)
+                       + np.dot(bias_a.T, a))
+
+            norm = 0
+
+            for v_prime in range(2**self.n_v):
+                v_prime_conf = np.array([sample2conf(index2state(v_prime, self.n_v))]).T
+                v_prime_conf = 2*v_prime_conf-1
+                for a_prime in range(2**self.n_a):
+                    a_prime_conf = np.array([sample2conf(index2state(a_prime, self.n_a))]).T
+                    a_prime_conf = 2*a_prime_conf-1
+                    norm += np.abs(np.exp(np.sum(np.log(1 + np.exp(weight_h @ v_prime_conf +
+                            np.array([bias_h]).T)), axis=0) + np.dot(a_prime_conf.T,
+                            weight_a @ v_prime_conf ) + np.dot(bias_v.T, v_prime_conf) +
+                            np.dot(bias_a.T, a_prime_conf)))**2
+
+        return(P/np.sqrt(norm))
 
     def stochastic_gradient_descent(self, n_iterations, learning_rate, n_bases,
                                     samples, subset_size, rho_true):
@@ -458,6 +471,9 @@ class RBM():
     def UBM_update_single(self, alpha, beta, omega, A, j):
         'modifies the RBM to output a new state'
 
+        #set nodeType to {-1, 1}
+        self.nodeType = "01"
+
 
         #new hidden node
         self.n_h += 1
@@ -544,14 +560,20 @@ class RBM():
 
 
     def UBM_energy(self, v, h, a):
-        v = 2*v-1
-        h = 2*h-1
-        a = 2*a-1
         'calculates the energy of a UBM configuration'
-        E =(np.dot(self.biases_v, v) + np.dot(self.biases_h, h) +
-            np.dot(self.biases_a, a) + np.dot(h, self.weights_h @ v) +
-            np.dot(a, self.weights_a @ v) + 1/2*np.dot(h, self.weights_X @ h) +
-            np.dot(a, self.weights_Y @ h) + 1/2*np.dot(v, self.weights_Z @ v))
+        if self.nodeType == "-11":
+            v = 2*v-1
+            h = 2*h-1
+            a = 2*a-1
+            E =(np.dot(self.biases_v, v) + np.dot(self.biases_h, h) +
+                np.dot(self.biases_a, a) + np.dot(h, self.weights_h @ v) +
+                np.dot(a, self.weights_a @ v) + 1/2*np.dot(h, self.weights_X @ h) +
+                np.dot(a, self.weights_Y @ h) + 1/2*np.dot(v, self.weights_Z @ v))
+        else:
+            E =(np.dot(self.biases_v, v) + np.dot(self.biases_h, h) +
+                np.dot(self.biases_a, a) + np.dot(h, self.weights_h @ v) +
+                np.dot(a, self.weights_a @ v) + 1/2*np.dot(h, self.weights_X @ h) +
+                np.dot(a, self.weights_Y @ h) )
         return(E)
 
 
@@ -560,6 +582,8 @@ class RBM():
             - acts on qubits j, k
 
         """
+        #set nodeType to "-1,1"
+        self.nodeType = "-11"
 
         lambda_entry = Lambda[0, 1]
         gamma_entry = Gamma[0, 1]

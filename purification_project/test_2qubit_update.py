@@ -6,8 +6,8 @@ np.set_printoptions(precision = 2, linewidth = 150) # for nice format
 
 # 2-body unitary: matrix rep
 U2 = two_body_entangling(np.pi/4)
-print(U2)
-#U_tot = total_unitary([identity, U2])  #U2 acts on 2nd and 3rd qubit
+#print(U2)
+#U_tot = total_unitary([identity, U2, identity])  #U2 acts on 2nd and 3rd qubit
 # 2-body unitary: RBM params
 alpha_1 = 0
 alpha_2 = 0
@@ -26,7 +26,8 @@ n_hidden_units = 2
 n_auxiliary_units = 2
 
 #initialize Boltzmann Machine
-boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units, 0.3)
+boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units, 0)
+boltz_machine.nodeType = "-11"
 boltz_machine.calc_rho_NN()
 boltz_machine.check_rho_valid()
 

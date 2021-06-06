@@ -6,13 +6,13 @@ np.set_printoptions(precision = 2, linewidth = 90) # for nice format
 
 
 # specify settings
-n_spins = 3
+n_spins = 2
 n_samples = 1000
 n_bases = 3**n_spins #Pauli-operator specific!
 
-n_visible_units = 3
-n_hidden_units = 4
-n_auxiliary_units = 4
+n_visible_units = 2
+n_hidden_units = 2
+n_auxiliary_units = 2
 
 training_steps = 10
 learning_rate = 1.0e-2
@@ -48,13 +48,14 @@ print(a1, b1, c1)
 
 
 U_test = exp_unitary(1, alpha, beta, omega)
-local_unitaries = [U_test, identity, identity]
+local_unitaries = [U_test, identity]
 alpha_RBM, beta_RBM, omega_RBM, A_RBM = exp2spin_unitary(alpha, beta, omega)
 # the unitary is now correctly encoded in two reps: RBM exponential with complex
 # parameters, simple exponential with 3 real parameters
 
 "initialize random density matrix"
 boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units, 1)
+boltz_machine.nodeType = "01"
 boltz_machine.calc_rho_NN() #calculate the density matrix
 boltz_machine.check_rho_valid()
 print("trace of rho^2")
