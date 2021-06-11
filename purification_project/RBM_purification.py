@@ -81,7 +81,7 @@ class RBM():
 
         if part == "r":
             for i in range(self.n_h):
-                up1 = 1/(np.exp(-(np.dot(weight_h[i, :], v1) + bias_h[i])) + 1)
+                up1 = 1/self(np.exp(-(np.dot(weight_h[i, :], v1) + bias_h[i])) + 1)
                 up2 = 1/(np.exp(-(np.dot(np.conj(weight_h[i, :]), v2) +
                                 np.conj(bias_h[i]))) + 1)
                 d_bias_h[i] = up1 + up2
@@ -303,6 +303,17 @@ class RBM():
                                     weight_a, j, a_conf)))
         return(rho_ij)
 
+    def calc_psi_vversion(self, v):
+        P = 0
+        for h_prime in range(2**self.n_v):
+            h_prime_conf = np.array([sample2conf(index2state(h_prime, self.n_h))])
+            h_prime_conf = 2*h_prime_conf - 1
+            E =(np.dot(self.biases_v, v) + np.dot(self.biases_h, h_prime_conf) +
+                 np.dot(h_prime_conf, self.weights_h @ v))
+            P += np.exp(E)
+        return(P)
+
+
     def calc_psi(self, bias_v, bias_h, bias_a, weight_h, weight_a, v, a):
         if self.nodeType == "-11":
             v = 2*v-1
@@ -311,7 +322,6 @@ class RBM():
                        + np.dot(a.T, weight_a @ v ) + np.dot(bias_v.T, v) + np.dot(bias_a.T, a))
 
             norm = 0
-
             for v_prime in range(2**self.n_v):
                 v_prime_conf = np.array([sample2conf(index2state(v_prime, self.n_v))]).T
                 v_prime_conf = 2*v_prime_conf-1
@@ -342,7 +352,8 @@ class RBM():
                             weight_a @ v_prime_conf ) + np.dot(bias_v.T, v_prime_conf) +
                             np.dot(bias_a.T, a_prime_conf)))**2
 
-        return(P/np.sqrt(norm))
+        #return(P/np.sqrt(norm))
+        return(P)
 
     def stochastic_gradient_descent(self, n_iterations, learning_rate, n_bases,
                                     samples, subset_size, rho_true):
