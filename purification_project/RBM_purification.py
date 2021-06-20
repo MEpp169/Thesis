@@ -306,7 +306,7 @@ class RBM():
     def calc_psi_vversion(self, v):
         P = 0
         for h_prime in range(2**self.n_v):
-            h_prime_conf = np.array([sample2conf(index2state(h_prime, self.n_h))])
+            h_prime_conf = np.array([sample2conf(index2state(h_prime, self.n_h))]).T
             h_prime_conf = 2*h_prime_conf - 1
             E =(np.dot(self.biases_v, v) + np.dot(self.biases_h, h_prime_conf) +
                  np.dot(h_prime_conf, self.weights_h @ v))
@@ -353,7 +353,7 @@ class RBM():
                             np.dot(bias_a.T, a_prime_conf)))**2
 
         #return(P/np.sqrt(norm))
-        return(P)
+        return(P/norm)
 
     def stochastic_gradient_descent(self, n_iterations, learning_rate, n_bases,
                                     samples, subset_size, rho_true):
@@ -569,6 +569,10 @@ class RBM():
 
         self.rho_encoded_UBM = rho_UBM
 
+    def RBM_energy(self, v, h):
+        #calculates the energy of a restricted Boltzmann machine
+        E = np.dot(self.biases_v, v) + np.dot(self.biases_h, h) + np.dot(h, self.weights_h @ v)
+        return(E)
 
     def UBM_energy(self, v, h, a):
         'calculates the energy of a UBM configuration'
@@ -585,6 +589,17 @@ class RBM():
                 np.dot(self.biases_a, a) + np.dot(h, self.weights_h @ v) +
                 np.dot(a, self.weights_a @ v) + 1/2*np.dot(h, self.weights_X @ h) +
                 np.dot(a, self.weights_Y @ h) )
+        return(E)
+
+    def RBM_energy_ahid(self, v, h, a):
+        "calculates the energy of an RBM configuration where the auxiliary units are in the hidden layer"
+        #vhelp = v.reshape((2, 1))
+        """E =(np.dot(self.biases_v, v) + np.dot(self.biases_h, h) +
+            np.dot(self.biases_a, a) + np.dot(h, (self.weights_h @ vhelp).flatten()) +
+            np.dot(a, (self.weights_a @ vhelp).flatten()))"""
+        E =(np.dot(self.biases_v, v) + np.dot(self.biases_h, h) +
+            np.dot(self.biases_a, a) + np.dot(h, self.weights_h @ v) +
+            np.dot(a, self.weights_a @ v))
         return(E)
 
 
@@ -655,7 +670,6 @@ class RBM():
 
 
 
-
 'Functions'
 
 def state2index(state, n_qubits):
@@ -674,6 +688,7 @@ def random_subset(set, subset_size):
     subset = [set[i] for i in randints]
 
     return(subset)
+
 
 
 
