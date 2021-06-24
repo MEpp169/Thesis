@@ -343,17 +343,17 @@ class RBM():
 
             for v_prime in range(2**self.n_v):
                 v_prime_conf = np.array([sample2conf(index2state(v_prime, self.n_v))]).T
-                v_prime_conf = 2*v_prime_conf-1
+                #v_prime_conf = 2*v_prime_conf-1
                 for a_prime in range(2**self.n_a):
                     a_prime_conf = np.array([sample2conf(index2state(a_prime, self.n_a))]).T
-                    a_prime_conf = 2*a_prime_conf-1
+                    #a_prime_conf = 2*a_prime_conf-1
                     norm += np.abs(np.exp(np.sum(np.log(1 + np.exp(weight_h @ v_prime_conf +
                             np.array([bias_h]).T)), axis=0) + np.dot(a_prime_conf.T,
                             weight_a @ v_prime_conf ) + np.dot(bias_v.T, v_prime_conf) +
                             np.dot(bias_a.T, a_prime_conf)))**2
 
         #return(P/np.sqrt(norm))
-        return(P/norm)
+        return(P/np.sqrt(norm))
 
     def stochastic_gradient_descent(self, n_iterations, learning_rate, n_bases,
                                     samples, subset_size, rho_true):
@@ -482,6 +482,8 @@ class RBM():
     def UBM_update_single(self, alpha, beta, omega, A, j):
         'modifies the RBM to output a new state'
 
+        'this code has to be adapted to also work for successive gates'
+
         #set nodeType to {-1, 1}
         self.nodeType = "01"
 
@@ -511,16 +513,38 @@ class RBM():
         #print(self.weights_h)
 
         self.weights_a[:, j] = np.zeros(self.n_a)
-        # h-h interactions
-        self.weights_X = np.zeros((self.n_h, self.n_h), dtype = complex)
-        self.weights_X[-1, :-1] = old_weights_h[:, j].T
-        self.weights_X[:-1, -1] = old_weights_h[:, j]
 
-        #print(self.weights_X)
+
+        'update h-h interactions: check if unitary has already been applied'
+
+        if hasattr(self, "A"):
+            print("already updated")
+            old_weights_X = np.copy(self.weights_X)
+            self.weights_X = np.zeros((self.n_h, self.n_h), dtype = complex)
+            self.weights_X[:-1, :-1] = old_weights_X
+            self.weights_X[-1, :-1] = old_weights_h[:, j].T
+            self.weights_X[:-1, -1] = old_weights_h[:, j]
+        else:
+            print("First RBM update ")
+            self.weights_X = np.zeros((self.n_h, self.n_h), dtype = complex)
+            self.weights_X[-1, :-1] = old_weights_h[:, j].T
+            self.weights_X[:-1, -1] = old_weights_h[:, j]
+
+        if hasattr(self, "A"):
+            print("already updated")
+            old_weights_Y = np.copy(self.weights_Y)
+            self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
+            self.weights_Y[:, :-1] = old_weights_Y
+            self.weights_Y[:, -1] = old_weights_a[:, j].T
+
+        else:
+            print("First RBM update ")
+            self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
+            self.weights_Y[:, -1] = old_weights_a[:, j].T
+
+
 
         # a-h interactions
-        self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
-        self.weights_Y[:, -1] = old_weights_a[:, j].T
 
 
         #print(self.weights_Y)
@@ -611,6 +635,7 @@ class RBM():
         #set nodeType to "-1,1"
         self.nodeType = "-11"
 
+
         lambda_entry = Lambda[0, 1]
         gamma_entry = Gamma[0, 1]
         #two new hidden nodes
@@ -636,37 +661,85 @@ class RBM():
         self.biases_h[-1] = beta_2 + old_biases_v[k_ind]
 
         #update weight_matrix
-        self.weights_h = np.zeros((self.n_h, self.n_v), dtype=complex)
-        self.weights_h[:-2, :j_ind] = old_weights_h[:, :j_ind]
-        self.weights_h[:-2, j_ind+1:k_ind] = old_weights_h[:, j_ind+1:k_ind]
-        self.weights_h[:-2, k_ind+1:] = old_weights_h[:, k_ind+1:]
-        self.weights_h[-2, j_ind] = Omega[0, 0]
-        self.weights_h[-1, j_ind] = Omega[1, 0]
-        self.weights_h[-2, k_ind] = Omega[0, 1]
-        self.weights_h[-1, k_ind] = Omega[1, 1]
+        "here could be the reason why successiive 2-qubit gates don't work! "
+        if hasattr(self, "updated"):
+            self.weights_h = np.zeros((self.n_h, self.n_v), dtype=complex)
 
-        #introduce X (=h-h matrix)
-        self.weights_X = np.zeros((self.n_h, self.n_h), dtype=complex)
-        self.weights_X[-2, :-2] = old_weights_h[:, j_ind].T
-        self.weights_X[-1, :-2] = old_weights_h[:, k_ind].T
-        self.weights_X[:-2, -2] = old_weights_h[:, j_ind]
-        self.weights_X[:-2, -1] = old_weights_h[:, k_ind]
-        self.weights_X[-1, -2] = gamma_entry
-        self.weights_X[-2, -1] = gamma_entry
+            self.weights_h[:-2, :j_ind] = old_weights_h[:, :j_ind]
+            self.weights_h[:-2, j_ind+1:k_ind] = old_weights_h[:, j_ind+1:k_ind]
+            self.weights_h[:-2, k_ind+1:] = old_weights_h[:, k_ind+1:]
 
-        #introduce Y (=v-v matrix)
-        self.weights_Z = np.zeros((self.n_v, self.n_v), dtype=complex)
-        self.weights_Z[j_ind, k_ind] = lambda_entry
-        self.weights_Z[k_ind, j_ind] = lambda_entry
+            self.weights_h[-2, :] = self.weights_Z[j_ind, :]
+            self.weights_h[-1, :] = self.weights_Z[k_ind, :]
+            #replace the Z-entries by unitary parameters
+            self.weights_h[-2, j_ind] = Omega[0, 0]
+            self.weights_h[-1, j_ind] = Omega[1, 0]
+            self.weights_h[-2, k_ind] = Omega[0, 1]
+            self.weights_h[-1, k_ind] = Omega[1, 1]
+        else:
+            self.weights_h = np.zeros((self.n_h, self.n_v), dtype=complex)
+            self.weights_h[:-2, :j_ind] = old_weights_h[:, :j_ind]
+            self.weights_h[:-2, j_ind+1:k_ind] = old_weights_h[:, j_ind+1:k_ind]
+            self.weights_h[:-2, k_ind+1:] = old_weights_h[:, k_ind+1:]
+            self.weights_h[-2, j_ind] = Omega[0, 0]
+            self.weights_h[-1, j_ind] = Omega[1, 0]
+            self.weights_h[-2, k_ind] = Omega[0, 1]
+            self.weights_h[-1, k_ind] = Omega[1, 1]
 
-        # a-h interactions
-        self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
-        self.weights_Y[:, -2] = old_weights_a[:, j_ind].T
-        self.weights_Y[:, -1] = old_weights_a[:, k_ind].T
+
 
         #don't forget a-v zeroing!
         self.weights_a[:, j_ind] = np.zeros(self.n_a)
         self.weights_a[:, k_ind] = np.zeros(self.n_a)
+
+
+        if hasattr(self, "updated"):
+            print("already updated")
+            old_weights_X = np.copy(self.weights_X)
+            self.weights_X = np.zeros((self.n_h, self.n_h), dtype=complex)
+            self.weights_X[-2, :-2] = old_weights_h[:, j_ind].T
+            self.weights_X[-1, :-2] = old_weights_h[:, k_ind].T
+            self.weights_X[:-2, -2] = old_weights_h[:, j_ind]
+            self.weights_X[:-2, -1] = old_weights_h[:, k_ind]
+            self.weights_X[-1, -2] = gamma_entry + self.weights_Z[j_ind, k_ind]
+            self.weights_X[-2, -1] = gamma_entry + self.weights_Z[j_ind, k_ind]
+            self.weights_X[:-2, :-2] = old_weights_X
+
+
+            self.weights_Z[j_ind, k_ind] = lambda_entry
+            self.weights_Z[k_ind, j_ind] = lambda_entry
+
+            # a-h interactions
+            old_weights_Y = np.copy(self.weights_Y)
+            self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
+            self.weights_Y[:, -2] = old_weights_a[:, j_ind].T
+            self.weights_Y[:, -1] = old_weights_a[:, k_ind].T
+            self.weights_Y[:, :-2] = old_weights_Y
+
+        else:
+            print("First RBM update ")
+            self.weights_X = np.zeros((self.n_h, self.n_h), dtype=complex)
+            self.weights_X[-2, :-2] = old_weights_h[:, j_ind].T
+            self.weights_X[-1, :-2] = old_weights_h[:, k_ind].T
+            self.weights_X[:-2, -2] = old_weights_h[:, j_ind]
+            self.weights_X[:-2, -1] = old_weights_h[:, k_ind]
+            self.weights_X[-1, -2] = gamma_entry
+            self.weights_X[-2, -1] = gamma_entry
+
+
+            self.weights_Z = np.zeros((self.n_v, self.n_v), dtype=complex)
+            self.weights_Z[j_ind, k_ind] = lambda_entry
+            self.weights_Z[k_ind, j_ind] = lambda_entry
+
+
+            # a-h interactions
+            self.weights_Y = np.zeros((self.n_a, self.n_h), dtype = complex)
+            self.weights_Y[:, -2] = old_weights_a[:, j_ind].T
+            self.weights_Y[:, -1] = old_weights_a[:, k_ind].T
+
+
+
+        self.updated = True
 
 
 

@@ -1,0 +1,12 @@
+now apply quantum channel a second time -- see if it still works
+Density matrix after channel (analytical):
+[[0.5+0.00e+00j 0. -3.04e-18j]
+ [0. +4.48e-18j 0.5+0.00e+00j]]
+apply another unitary to whole system to realize channel
+... done
+density matrix after 2nd channel is (according to UBM update)
+[[ 0.02+0.j   -0.02-0.08j]
+ [-0.02+0.08j  0.98+0.j  ]]
+Deviation between both density matrices after 2nd channel:
+[[-0.48+0.j   -0.02-0.08j]
+ [-0.02+0.08j  0.48+0.j  ]]

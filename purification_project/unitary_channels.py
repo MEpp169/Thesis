@@ -4,11 +4,14 @@ from RBM_purification import *
 #from quantum_channels import qa_RBM
 
 
-np.set_printoptions(precision = 2, linewidth = 150) # for nice format
+np.set_printoptions(precision = 2, linewidth = 200) # for nice format
 
 # 2-body unitary: matrix rep
+c_factor = 4 # if even: works, odd or fraction: not
 
-U2 = two_body_entangling(np.pi/4*2)
+
+U2 = two_body_entangling(np.pi/4*c_factor)
+#U2 = two_body_entangling(np.pi/4)
 
 print("U2")
 print(U2)
@@ -22,10 +25,11 @@ alpha_2 = 0
 beta_1 = 0
 beta_2 = 0
 Gamma =  np.zeros((2, 2))
-lam = 2*np.pi/4
+lam = c_factor*np.pi/4
+#lam = np.pi/4
 
 Lambda = 1j*lam*np.array([[0, 1], [1, 0]])
-n = 8 #should be even I think
+n = 2 #should be even I think
 Omega = 1j*(2 * n + 1) * np.pi / 4 * np.array([[1, 0], [0, 1]])
 
 class qa_RBM():
@@ -39,8 +43,8 @@ class qa_RBM():
 
         self.b_v =  (np.random.uniform(-1, 1, (self.n_v)) + 1j * np.random.uniform(-1, 1, (self.n_v)))
         self.b_h =  (np.random.uniform(-1, 1, (self.n_h)) + 1j * np.random.uniform(-1, 1, (self.n_h)))
-        #self.w_hv = (np.random.uniform(-1, 1, (self.n_h, self.n_v)) + 1j * np.random.uniform(-1, 1, (self.n_h, self.n_v)))
-        self.w_hv = np.zeros((self.n_h, self.n_v), dtype=complex)
+        self.w_hv = (np.random.uniform(-1, 1, (self.n_h, self.n_v)) + 1j * np.random.uniform(-1, 1, (self.n_h, self.n_v)))
+        #self.w_hv = np.zeros((self.n_h, self.n_v), dtype=complex)
 
     def psi(self, q, a):
         "calculates wavefunction for state (q, a) = qubits, auxiliaries"
@@ -213,7 +217,7 @@ E1_dag = np.conj(E1).T
 E2_dag = np.conj(E2).T
 
 print(E1_dag @ E1 + E2_dag @ E2)
-single_qubit_rho = qa_RBM(1, 1, 6)
+single_qubit_rho = qa_RBM(1, 1, 3)
 
 single_qubit_rho.rho()
 print("Density matrix before channel: ")
@@ -244,6 +248,8 @@ print(single_qubit_rho.rho_encoded_UBM - rho_after_channel)
 print("\n")
 print("\n")
 print("\n")
+
+id  = np.array([[1, 0], [0, 1]])
 
 print("now apply quantum channel a second time -- see if it still works")
 rho_after_2nd_channel = E1 @ rho_after_channel @ E1_dag +  E2 @ rho_after_channel @ E2_dag

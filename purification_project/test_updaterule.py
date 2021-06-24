@@ -58,6 +58,8 @@ boltz_machine = RBM(n_visible_units, n_hidden_units, n_auxiliary_units, 1)
 boltz_machine.nodeType = "01"
 boltz_machine.calc_rho_NN() #calculate the density matrix
 boltz_machine.check_rho_valid()
+print("The density matrix: ")
+print(np.trace(boltz_machine.rho_encoded))
 print("trace of rho^2")
 print(np.trace(boltz_machine.rho_encoded @ boltz_machine.rho_encoded))
 
@@ -75,6 +77,8 @@ print(test_rho.matrix)
 print("Fidelity of density matrices before and after unitary:")
 print(fidelity(boltz_machine.rho_encoded, test_rho.matrix))
 
+
+
 "perform the upates on RBM"
 boltz_machine.UBM_update_single(alpha_RBM, beta_RBM, omega_RBM, A_RBM, 0)
 boltz_machine.UBM_rho()
@@ -83,6 +87,33 @@ print(boltz_machine.rho_encoded_UBM)
 print("Fidelity of density matrices exact vs UBM")
 print(fidelity(boltz_machine.rho_encoded_UBM, test_rho.matrix))
 
+
+
+
+
+# now perform second unitary_operation
+print("\n")
+print("\n")
+print("\n")
+print("----------------------")
+print("\n")
+print("second unitary operation: ")
+print("\n")
+print("\n")
+print("first analytical (exact)")
+test_rho.unitary_operation(total_unitary(local_unitaries))
+print("ANALYTICAL: Density matrix after second unitary: ")
+print(test_rho.matrix)
+
+print("\n")
+print("\n")
+print("now with UBM uupdates")
+boltz_machine.UBM_update_single(alpha_RBM, beta_RBM, omega_RBM, A_RBM, 0)
+boltz_machine.UBM_rho()
+print("The density matrix encoded by the UBM after the 2nd unitary operation:")
+print(boltz_machine.rho_encoded_UBM)
+print("Fidelity of density matrices exact vs UBM")
+print(fidelity(boltz_machine.rho_encoded_UBM, test_rho.matrix))
 
 """
 local_unitaries = [U_test]
