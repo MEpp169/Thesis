@@ -7,7 +7,7 @@ from RBM_purification import *
 np.set_printoptions(precision = 2, linewidth = 200) # for nice format
 
 # 2-body unitary: matrix rep
-c_factor = 4 # if even: works, odd or fraction: not
+c_factor = 2 # if even: works, odd or fraction: not
 
 
 U2 = two_body_entangling(np.pi/4*c_factor)
@@ -122,7 +122,7 @@ class qa_RBM():
 
         #store old parameters
         old_biases_v = np.copy(self.b_v)
-        old_biases_h = np.copy(self.b_h)
+        old_b_h = np.copy(self.b_h)
 
         old_weights_h = np.copy(self.w_hv)
 
@@ -132,7 +132,7 @@ class qa_RBM():
 
         #update hidden biases
         self.b_h = np.zeros(self.n_h, dtype=complex)
-        self.b_h[:-2] = old_biases_h
+        self.b_h[:-2] = old_b_h
         self.b_h[-2] = beta_1 + old_biases_v[j_ind]
         self.b_h[-1] = beta_2 + old_biases_v[k_ind]
 
@@ -159,6 +159,105 @@ class qa_RBM():
         self.w_Z = np.zeros((self.n_v, self.n_v), dtype=complex)
         self.w_Z[j_ind, k_ind] = lambda_entry
         self.w_Z[k_ind, j_ind] = lambda_entry
+
+
+    def UBM_update_double_prime(self, j_ind, k_ind, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega):
+        """Updates the RBM to realize the effect of a 2-qubit gate
+            - acts on qubits j, k
+
+        """
+        #set nodeType to "-1,1"
+        self.nodeType = "-11"
+
+
+        lambda_entry = Lambda[0, 1]
+        gamma_entry = Gamma[0, 1]
+        #two new hidden nodes
+        self.n_h += 2
+
+        #store old parameters
+        old_b_v = np.copy(self.b_v)
+        old_b_h = np.copy(self.b_h)
+
+        old_w_hv = np.copy(self.w_hv)
+
+
+        #update visible biases
+        self.b_v[j_ind] = alpha_1
+        self.b_v[k_ind] = alpha_2
+
+        #update hidden biases
+        self.b_h = np.zeros(self.n_h, dtype=complex)
+        self.b_h[:-2] = old_b_h
+        self.b_h[-2] = beta_1 + old_b_v[j_ind]
+        self.b_h[-1] = beta_2 + old_b_v[k_ind]
+
+        #update weight_matrix
+        "here could be the reason why successiive 2-qubit gates don't work! "
+        if hasattr(self, "updated"):
+            self.w_hv = np.zeros((self.n_h, self.n_v), dtype=complex)
+
+            self.w_hv[:-2, :j_ind] = old_w_hv[:, :j_ind]
+            self.w_hv[:-2, j_ind+1:k_ind] = old_w_hv[:, j_ind+1:k_ind]
+            self.w_hv[:-2, k_ind+1:] = old_w_hv[:, k_ind+1:]
+
+            self.w_hv[-2, :] = self.w_Z[j_ind, :]
+            self.w_hv[-1, :] = self.w_Z[k_ind, :]
+            #replace the Z-entries by unitary parameters
+            self.w_hv[-2, j_ind] = Omega[0, 0]
+            self.w_hv[-1, j_ind] = Omega[1, 0]
+            self.w_hv[-2, k_ind] = Omega[0, 1]
+            self.w_hv[-1, k_ind] = Omega[1, 1]
+        else:
+            self.w_hv = np.zeros((self.n_h, self.n_v), dtype=complex)
+            self.w_hv[:-2, :j_ind] = old_w_hv[:, :j_ind]
+            self.w_hv[:-2, j_ind+1:k_ind] = old_w_hv[:, j_ind+1:k_ind]
+            self.w_hv[:-2, k_ind+1:] = old_w_hv[:, k_ind+1:]
+            self.w_hv[-2, j_ind] = Omega[0, 0]
+            self.w_hv[-1, j_ind] = Omega[1, 0]
+            self.w_hv[-2, k_ind] = Omega[0, 1]
+            self.w_hv[-1, k_ind] = Omega[1, 1]
+
+
+
+
+
+        if hasattr(self, "updated"):
+            print("already updated")
+            old_w_X = np.copy(self.w_X)
+            self.w_X = np.zeros((self.n_h, self.n_h), dtype=complex)
+            self.w_X[-2, :-2] = old_w_hv[:, j_ind].T
+            self.w_X[-1, :-2] = old_w_hv[:, k_ind].T
+            self.w_X[:-2, -2] = old_w_hv[:, j_ind]
+            self.w_X[:-2, -1] = old_w_hv[:, k_ind]
+            self.w_X[-1, -2] = gamma_entry + self.w_Z[j_ind, k_ind]
+            self.w_X[-2, -1] = gamma_entry + self.w_Z[j_ind, k_ind]
+            self.w_X[:-2, :-2] = old_w_X
+
+
+            self.w_Z[j_ind, k_ind] = lambda_entry
+            self.w_Z[k_ind, j_ind] = lambda_entry
+
+
+        else:
+            print("First RBM update ")
+            self.w_X = np.zeros((self.n_h, self.n_h), dtype=complex)
+            self.w_X[-2, :-2] = old_w_hv[:, j_ind].T
+            self.w_X[-1, :-2] = old_w_hv[:, k_ind].T
+            self.w_X[:-2, -2] = old_w_hv[:, j_ind]
+            self.w_X[:-2, -1] = old_w_hv[:, k_ind]
+            self.w_X[-1, -2] = gamma_entry
+            self.w_X[-2, -1] = gamma_entry
+
+
+            self.w_Z = np.zeros((self.n_v, self.n_v), dtype=complex)
+            self.w_Z[j_ind, k_ind] = lambda_entry
+            self.w_Z[k_ind, j_ind] = lambda_entry
+
+
+
+
+        self.updated = True
 
     def UBM_psi(self, q, a):
         p = 0
@@ -235,7 +334,8 @@ print("Density matrix after channel (analytical): ")
 print(rho_after_channel)
 
 print("applying unitary to whole system to realize channel")
-single_qubit_rho.UBM_update_double(0, 1, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega)
+#single_qubit_rho.UBM_update_double(0, 1, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega)
+single_qubit_rho.UBM_update_double_prime(0, 1, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega)
 single_qubit_rho.UBM_rho()
 print("... done")
 
@@ -257,7 +357,8 @@ print("Density matrix after channel (analytical): ")
 print(rho_after_2nd_channel)
 
 print("apply another unitary to whole system to realize channel")
-single_qubit_rho.UBM_update_double(0, 1, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega)
+#single_qubit_rho.UBM_update_double(0, 1, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega)
+single_qubit_rho.UBM_update_double_prime(0, 1, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega)
 single_qubit_rho.UBM_rho()
 print("... done")
 
