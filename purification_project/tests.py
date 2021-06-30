@@ -48,7 +48,13 @@ def exp_operator(alpha, beta, omega, A):
     U[1, 1] = np.exp(alpha + beta + omega)
     U *= A
     return(U)
-
+"""
 print(exp_operator(a1, b1, c1, d))
 print(exp_unitary(1, 1, -1, 10))
 print(a1, b1, c1)
+"""
+
+mat = np.array([[ 0.46+0.j ,  -0.06+0.19j],
+                [-0.06-0.19j  , 0.54+0.j  ]])
+
+print(np.trace(mat @ mat))

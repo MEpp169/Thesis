@@ -6,6 +6,13 @@ np.set_printoptions(precision = 2, linewidth = 150) # for nice format
 
 # 2-body unitary: matrix rep
 U2 = two_body_entangling(np.pi/4)
+
+print("The unitary operation")
+print(U2)
+
+print("\n")
+print("\n")
+
 #print(U2)
 #U_tot = total_unitary([identity, U2, identity])  #U2 acts on 2nd and 3rd qubit
 # 2-body unitary: RBM params

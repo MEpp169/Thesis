@@ -7,16 +7,24 @@ from RBM_purification import *
 np.set_printoptions(precision = 2, linewidth = 200) # for nice format
 
 # 2-body unitary: matrix rep
-c_factor = 2 # if even: works, odd or fraction: not
+c_factor = 14 # if even: works, odd or fraction: not
 d_factor = 8
 
 U2 = two_body_entangling(np.pi/4*c_factor)
-U2b = two_body_entangling(np.pi/4*c_factor*d_factor)
+
+
+print("apply twice")
+print(U2 @ U2)
 
 print("U2")
 print(U2)
-print("unitary? ")
-print(U2@np.conj(U2).T) #is still a unitary, even for different choice of lambda
+
+id = np.array([[1, 0], [0, 1]])
+
+U_tot = np.kron(id, U2) # for n_q = 1, n_a = 2: qubit, auxiliary, auxiliary
+
+
+
 
 
 # 2-body unitary: RBM rep
@@ -108,67 +116,6 @@ class qa_RBM():
                 rho_RBM[i, j] = self.rho_ij(v1, v2)
 
         self.rho = rho_RBM
-
-
-    def UBM_update_single(self, alpha, beta, omega, A, j):
-        'modifies the RBM to output a new state'
-
-        'this code has to be adapted to also work for successive gates'
-
-        #set nodeType to {-1, 1}
-        #self.nodeType = "01"
-
-
-        #new hidden node
-        self.n_h += 1
-
-        #store old parameters
-        old_b_v = np.copy(self.b_v)
-        old_b_h = np.copy(self.b_h)
-
-        old_w_hv = np.copy(self.w_hv)
-
-        self.b_v[j] = alpha
-
-        self.b_h = np.zeros(self.n_h, dtype = complex)
-        self.b_h[:-1] = old_b_h
-        self.b_h[-1] = beta + old_b_v[j]
-        #print(self.biases_h)
-
-        self.w_hv = np.zeros((self.n_h, self.n_v), dtype = complex)
-        self.w_hv[:-1, :j] = old_w_hv[:, :j]
-        self.w_hv[-1, j] = omega
-        self.w_hv[:-1, j+1:] = old_w_hv[:, j+1:]
-        #print(self.weights_h)
-
-
-        'update h-h interactions: check if unitary has already been applied'
-
-        if hasattr(self, "A"):
-            print("already updated")
-            old_w_X = np.copy(self.w_X)
-            self.w_X = np.zeros((self.n_h, self.n_h), dtype = complex)
-            self.w_X[:-1, :-1] = old_w_X
-            self.w_X[-1, :-1] = old_w_hv[:, j].T
-            self.w_X[:-1, -1] = old_w_hv[:, j]
-        else:
-            print("First RBM update ")
-            self.w_X = np.zeros((self.n_h, self.n_h), dtype = complex)
-            self.w_X[-1, :-1] = old_w_hv[:, j].T
-            self.w_X[:-1, -1] = old_w_hv[:, j]
-
-
-
-
-        # a-h interactions
-
-
-        #print(self.weights_Y)
-
-        #print(self.weights_X)
-        #print(self.weights_Y)
-        self.A = A
-
 
 
     def UBM_update_double(self, j_ind, k_ind, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega):
@@ -373,37 +320,23 @@ class qa_RBM():
 
 
 
-E1 = U2[:2, :2]
-E2 = U2[2:, :2]
+E1 = U_tot[:2, :2]
+E2 = U_tot[2:4, :2]
+E3 = U_tot[4:6, :2]
+E4 = U_tot[6:, :2]
 
 E1_dag = np.conj(E1).T
 E2_dag = np.conj(E2).T
+E3_dag = np.conj(E3).T
+E4_dag = np.conj(E4).T
 
-E1b = U2b[:2, :2]
-E2b = U2b[2:, :2]
-
-E1b_dag = np.conj(E1b).T
-E2b_dag = np.conj(E2b).T
 
 print("Kraus operators: ")
-print("E1")
-print(E1)
-print("E2")
-print(E2)
 
-print("E1b")
-print(E1b)
-print("E2b")
-print(E2b)
+#print(E1, E2, E3, E4)
 
 
-print("channel?")
-print("first: ")
-print(E1_dag @ E1 + E2_dag @ E2)
-print("second: ")
-print(E1b_dag @ E1b + E2b_dag @ E2b)
-
-single_qubit_rho = qa_RBM(1, 1, 3)
+single_qubit_rho = qa_RBM(1, 2, 3)
 
 single_qubit_rho.rho()
 print("Density matrix before channel: ")
@@ -411,18 +344,15 @@ print(single_qubit_rho.rho)
 
 rho_before_channel = np.copy(single_qubit_rho.rho)
 print(np.trace(rho_before_channel @ rho_before_channel))
-print("test")
-print(E1_dag @ rho_before_channel @ E1)
-print(E2_dag @ rho_before_channel @ E2)
 
-rho_after_channel = E1 @ rho_before_channel @ E1_dag +  E2 @ rho_before_channel @ E2_dag
+rho_after_channel = E1 @ rho_before_channel @ E1_dag +  E2 @ rho_before_channel @ E2_dag + E3 @ rho_before_channel @ E3_dag +  E4 @ rho_before_channel @ E4_dag
 
 print("Density matrix after channel (analytical): ")
 print(rho_after_channel)
 
 print("applying unitary to whole system to realize channel")
 #single_qubit_rho.UBM_update_double(0, 1, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega)
-single_qubit_rho.UBM_update_double_prime(0, 1, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega)
+single_qubit_rho.UBM_update_double_prime( 0, 1, alpha_1, alpha_2, beta_1, beta_2, Gamma, Lambda, Omega)
 single_qubit_rho.UBM_rho()
 print("... done")
 
@@ -439,7 +369,7 @@ print("\n")
 #------------------------------------------------------------------------------#
 
 
-
+"""
 print("now apply quantum channel a second time -- see if it still works")
 rho_after_2nd_channel = E1b @ rho_after_channel @ E1b_dag +  E2b @ rho_after_channel @ E2b_dag
 print("Density matrix after channel (analytical): ")
@@ -456,3 +386,4 @@ print(single_qubit_rho.rho_encoded_UBM)
 
 print("Deviation between both density matrices after 2nd channel: ")
 print(single_qubit_rho.rho_encoded_UBM - rho_after_2nd_channel)
+"""

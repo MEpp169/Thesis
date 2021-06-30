@@ -485,7 +485,7 @@ class RBM():
         'this code has to be adapted to also work for successive gates'
 
         #set nodeType to {-1, 1}
-        self.nodeType = "01"
+        self.nodeType = "-11"
 
 
         #new hidden node

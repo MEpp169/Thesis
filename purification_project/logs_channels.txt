@@ -1,0 +1,146 @@
+The 2-body entangling unitary: pi/2
+[[-5.00e-01+3.06e-17j  3.06e-17+5.00e-01j  3.06e-17+5.00e-01j  5.00e-01-3.06e-17j]
+ [ 3.06e-17-5.00e-01j  5.00e-01+3.06e-17j -5.00e-01-3.06e-17j  3.06e-17-5.00e-01j]
+ [ 3.06e-17-5.00e-01j -5.00e-01-3.06e-17j  5.00e-01+3.06e-17j  3.06e-17-5.00e-01j]
+ [ 5.00e-01-3.06e-17j  3.06e-17+5.00e-01j  3.06e-17+5.00e-01j -5.00e-01+3.06e-17j]]
+
+
+ Kraus operators: (first block column of nitary)
+ E1
+ [[-5.00e-01+3.06e-17j  3.06e-17+5.00e-01j]
+  [ 3.06e-17-5.00e-01j  5.00e-01+3.06e-17j]]
+
+ E2
+ [[ 5.00e-01+3.06e-17j  3.06e-17-5.00e-01j]
+  [ 3.06e-17+5.00e-01j -5.00e-01+3.06e-17j]]
+
+ channel? E1 E1✝ + E2 E2✝
+ [[1.+0.j 0.+0.j]
+  [0.+0.j 1.+0.j]]
+
+
+---------------- EXACT (Linear Algebra) -----------------------
+Density matrix before channel:
+[[0.31+0.j   0.06+0.04j]
+ [0.06-0.04j 0.69+0.j  ]]
+tr(rho^2):
+(0.5846740181513554+0j) < 1  ---> mixed state
+
+
+Density matrix after channel (analytical = with Kraus Operators):
+[[ 0.46+0.j   -0.06+0.19j]
+ [-0.06-0.19j  0.54+0.j  ]]
+ tr(rho^2):
+ (0.5826+0j)
+
+
+ ---------------- NNOs on RBMs --------------------------------
+Density matrix before channel:
+[[0.31+0.j   0.06+0.04j]
+ [0.06-0.04j 0.69+0.j  ]]
+
+applying unitary to whole system to realize channel
+density matrix afterwards is
+[[ 0.46+0.j   -0.06+0.19j]
+ [-0.06-0.19j  0.54+0.j  ]]
+
+
+
+--------------------------------------------
+The deviation between both density matrices:
+[[ 1.67e-16+0.00e+00j  1.39e-17-8.33e-17j]
+ [ 1.39e-17+8.33e-17j -2.22e-16+0.00e+00j]]
+--------------------------------------------
+
+
+
+---------- now apply quantum channel a second time --------------
+
+
+---------------- EXACT (Linear Algebra) -----------------------
+Density matrix after channel:
+[[0.31+0.j   0.06+0.04j]
+ [0.06-0.04j 0.69+0.j  ]]
+
+
+
+ ---------------- NNOs on RBMs --------------------------------
+apply another unitary to whole system to realize channel
+already updated
+... done
+density matrix after 2nd channel is (according to UBM update)
+[[0.31+0.j   0.06+0.04j]
+ [0.06-0.04j 0.69+0.j  ]]
+
+
+
+ --------------------------------------------
+ The deviation between both density matrices:
+[[-1.11e-16+0.00e+00j -1.39e-17-8.33e-17j]
+ [-1.39e-17+8.33e-17j  0.00e+00+0.00e+00j]]
+ --------------------------------------------
+
+
+
+
+
+
+
+
+now, two different channels: --------------------------------------------
+
+
+Kraus operators:
+E1
+[[-5.00e-01+3.06e-17j  3.06e-17+5.00e-01j]
+ [ 3.06e-17-5.00e-01j  5.00e-01+3.06e-17j]]
+E2
+[[ 5.00e-01+3.06e-17j  3.06e-17-5.00e-01j]
+ [ 3.06e-17+5.00e-01j -5.00e-01+3.06e-17j]]
+E1b
+[[ 2.45e-16+5.00e-01j  5.00e-01-2.45e-16j]
+ [ 5.00e-01+2.45e-16j -2.45e-16+5.00e-01j]]
+E2b
+[[-2.45e-16+5.00e-01j  5.00e-01+2.45e-16j]
+ [ 5.00e-01-2.45e-16j  2.45e-16+5.00e-01j]]
+
+
+
+
+ Density matrix after channel (analytical):
+ [[0.75+0.j   0.17+0.04j]
+  [0.17-0.04j 0.25+0.j  ]]
+
+
+applying unitary to whole system to realize channel
+First RBM update
+... done
+density matrix afterwards is
+[[0.75+0.j   0.17+0.04j]
+ [0.17-0.04j 0.25+0.j  ]]
+
+
+--------------------------------------------
+Deviation between both density matrices:
+[[-2.22e-16+0.00e+00j -1.94e-16+1.39e-16j]
+ [-1.94e-16-1.39e-16j -2.22e-16+0.00e+00j]]
+--------------------------------------------
+
+
+
+then apply 2nd channel:
+
+Density matrix after channel (analytical):
+[[0.46+0.j   0.17+0.25j]
+ [0.17-0.25j 0.54+0.j  ]]
+
+
+ apply another unitary to whole system to realize channel
+already updated
+... done
+density matrix after 2nd channel is (according to UBM update)
+[[0.46+0.j   0.17+0.25j]
+ [0.17-0.25j 0.54+0.j  ]]
+Deviation between both density matrices after 2nd channel:
+[[-2.78e-16+0.00e+00j -1.11e-16+8.33e-17j]
+ [-1.11e-16-8.33e-17j  2.22e-16+0.00e+00j]]
